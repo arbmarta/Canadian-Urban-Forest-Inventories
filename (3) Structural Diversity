@@ -16,11 +16,13 @@ df = df.dropna(subset=['DBH'])
 
 # Create bins
 bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, np.inf]
-n_classes = 11 # Number of DBH classes for each city
+n_classes = 17 # Number of DBH classes for each city
 bin_midpoints = [(bins[i] + bins[i+1]) / 2 for i in range(len(bins)-1)]
 
-# Define cities
+# Define cities and prepare lists for all midpoints and proportions
 cities = df['City'].unique()
+all_midpoints = []
+all_proportions = []
 
 ## Create histograms for the DBH distributions of each city (Urban Forest Diameter Class Distributions)
 # Loop over each city to create histograms and curve plots
@@ -80,6 +82,11 @@ for city in cities:
 
     # Plot the proportions for this city (only markers, no lines)
     plt.plot(bin_midpoints, proportions, 'o', markersize=4, markerfacecolor='k', markeredgewidth=0, label=f'{city} Data')
+
+# Create a line of best fit
+x_fit = np.linspace(0, 150, 1000)
+y_fit = 41.543 * np.exp(-0.039 * x_fit)
+plt.plot(x_fit, y_fit, 'k-', label='Line of Best Fit')
 
 # Legend
 inventory_data_handle = mlines.Line2D([], [], color='k', marker='o', linestyle='None', markersize=8, label='Inventory Data')
