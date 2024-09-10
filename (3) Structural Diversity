@@ -230,7 +230,8 @@ plt.show()
 
 
 ## Structural Diversity Index
-def calculate_shannon_wiener(city_data, bins):
+# Calculate Shannon-Wiener index for each city
+def calculate_shannon_wiener_city(city_data, bins):
     # Classify trees into DBH classes using binning
     dbh_classes = pd.cut(city_data['DBH'], bins=bins, labels=range(1, len(bins)))
 
@@ -256,8 +257,6 @@ def calculate_shannon_wiener(city_data, bins):
 
     return H, H_max
 
-
-# Calculate Shannon-Wiener index for each city
 city_results = []
 
 cities = df['City'].unique()
@@ -267,7 +266,7 @@ for city in cities:
     if len(city_data) == 0:
         continue  # Skip if there are no valid DBH values for the city
 
-    H, H_max = calculate_shannon_wiener(city_data, bins)
+    H, H_max = calculate_shannon_wiener_city(city_data, bins)
 
     # Store the result for the city
     city_results.append({
@@ -276,7 +275,100 @@ for city in cities:
         'Maximum Diversity (H_max)': H_max
     })
 
+# Calculate Shannon-Wiener index for each region
+def calculate_shannon_wiener_region(region_data, bins):
+    # Classify trees into DBH classes using binning
+    dbh_classes = pd.cut(region_data['DBH'], bins=bins, labels=range(1, len(bins)))
+
+    # Calculate the proportion of trees in each class
+    class_counts = dbh_classes.value_counts(normalize=True).sort_index()
+
+    # Check for empty upper bins and adjust the number of classes
+    last_non_empty_class = class_counts[class_counts > 0].index[-1]
+    valid_bins = bins[:last_non_empty_class + 1]  # Include up to the last non-empty class
+
+    # Reclassify using valid bins
+    dbh_classes = pd.cut(region_data['DBH'], bins=valid_bins, labels=range(1, len(valid_bins)))
+    class_counts = dbh_classes.value_counts(normalize=True).sort_index()
+
+    # Filter out zero proportions to avoid log(0)
+    class_proportions = class_counts[class_counts > 0]
+
+    # Calculate the Shannon-Wiener index (H)
+    H = -np.sum(class_proportions * np.log(class_proportions))
+
+    # Calculate H_max (maximum possible diversity)
+    H_max = np.log(len(valid_bins) - 1)  # Use the number of non-empty bins
+
+    return H, H_max
+
+region_results = []
+
+regions = df['Region'].unique()
+for region in regions:
+    region_data = df[df['Region'] == region]
+
+    if len(region_data) == 0:
+        continue  # Skip if there are no valid DBH values for the city
+
+    H, H_max = calculate_shannon_wiener_region(region_data, bins)
+
+    # Store the result for the city
+    region_results.append({
+        'Region': region,
+        'Shannon-Wiener Index (H)': H,
+        'Maximum Diversity (H_max)': H_max
+    })
+
+# Calculate Shannon-Wiener index for each ecozone
+def calculate_shannon_wiener_ecozone(ecozone_data, bins):
+    # Classify trees into DBH classes using binning
+    dbh_classes = pd.cut(ecozone_data['DBH'], bins=bins, labels=range(1, len(bins)))
+
+    # Calculate the proportion of trees in each class
+    class_counts = dbh_classes.value_counts(normalize=True).sort_index()
+
+    # Check for empty upper bins and adjust the number of classes
+    last_non_empty_class = class_counts[class_counts > 0].index[-1]
+    valid_bins = bins[:last_non_empty_class + 1]  # Include up to the last non-empty class
+
+    # Reclassify using valid bins
+    dbh_classes = pd.cut(ecozone_data['DBH'], bins=valid_bins, labels=range(1, len(valid_bins)))
+    class_counts = dbh_classes.value_counts(normalize=True).sort_index()
+
+    # Filter out zero proportions to avoid log(0)
+    class_proportions = class_counts[class_counts > 0]
+
+    # Calculate the Shannon-Wiener index (H)
+    H = -np.sum(class_proportions * np.log(class_proportions))
+
+    # Calculate H_max (maximum possible diversity)
+    H_max = np.log(len(valid_bins) - 1)  # Use the number of non-empty bins
+
+    return H, H_max
+
+ecozone_results = []
+
+ecozones = df['Ecozone'].unique()
+for ecozone in ecozones:
+    ecozone_data = df[df['Ecozone'] == ecozone]
+
+    if len(ecozone_data) == 0:
+        continue  # Skip if there are no valid DBH values for the city
+
+    H, H_max = calculate_shannon_wiener_city(ecozone_data, bins)
+
+    # Store the result for the city
+    ecozone_results.append({
+        'Ecozone': ecozone,
+        'Shannon-Wiener Index (H)': H,
+        'Maximum Diversity (H_max)': H_max
+    })
 
 # Convert results to a DataFrame for easy viewing
-Structural_Diversity_Index_df = pd.DataFrame(city_results)
-print(Structural_Diversity_Index_df)
+Structural_Diversity_Index_city_df = pd.DataFrame(city_results)
+print(Structural_Diversity_Index_city_df)
+Structural_Diversity_Index_region_df = pd.DataFrame(region_results)
+print(Structural_Diversity_Index_region_df)
+Structural_Diversity_Index_ecozone_df = pd.DataFrame(ecozone_results)
+print(Structural_Diversity_Index_ecozone_df)
