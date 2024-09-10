@@ -1,15 +1,54 @@
-# This code is based on the work of Morgenroth et al. (2020) (DOI: 10.3390/f11020135)
+#  This code is based on the work of Morgenroth et al. (2020) (DOI: 10.3390/f11020135)
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import gaussian_kde
+from scipy.stats import skew
 import matplotlib.lines as mlines
 
 df = pd.read_csv("cleaned_master.csv", low_memory=False)
 excluded_cities = ['Maple Ridge', 'New Westminster', 'Peterborough', 'Halifax']
 df = df[~df['City'].isin(excluded_cities)]
+
+# Data for Region Name
+data_region = {
+    "City": ['Victoria', 'Vancouver', 'New Westminster', 'Maple Ridge', 'Kelowna', 'Calgary', 'Edmonton',
+             'Strathcona County', 'Lethbridge', 'Regina', 'Winnipeg', 'Windsor', 'Waterloo', 'Kitchener', 'Guelph',
+             'Burlington', 'Mississauga', 'Toronto', 'Welland', 'St. Catharines', 'Niagara Falls', 'Ajax', 'Whitby',
+             'Peterborough', 'Kingston', 'Ottawa', 'Montreal', 'Longueuil', 'Quebec City', 'Fredericton', 'Moncton',
+             'Halifax'],
+    "Ecozone": ['BC', 'BC', 'BC', 'BC', 'BC', 'Prairie', 'Prairie', 'Prairie', 'Prairie', 'Prairie', 'Prairie',
+                'Ontario', 'Ontario', 'Ontario', 'Ontario', 'Ontario', 'Ontario', 'Ontario', 'Ontario', 'Ontario',
+                'Ontario', 'Ontario', 'Ontario', 'Ontario', 'Ontario', 'Ontario', 'Quebec', 'Quebec', 'Quebec',
+                'Atlantic', 'Atlantic', 'Atlantic']
+}
+region_df = pd.DataFrame(data_region)
+
+city_to_region = dict(zip(region_df['City'], region_df['Region']))
+df['Region'] = df['City'].map(city_to_region)
+print(df.head())
+
+# Data for Ecozone Name
+data_ecozone = {
+    "City": ['Victoria', 'Vancouver', 'New Westminster', 'Maple Ridge', 'Kelowna', 'Calgary', 'Edmonton',
+             'Strathcona County', 'Lethbridge', 'Regina', 'Winnipeg', 'Windsor', 'Waterloo', 'Kitchener', 'Guelph',
+             'Burlington', 'Mississauga', 'Toronto', 'Welland', 'St. Catharines', 'Niagara Falls', 'Ajax', 'Whitby',
+             'Peterborough', 'Kingston', 'Ottawa', 'Montreal', 'Longueuil', 'Quebec City', 'Fredericton', 'Moncton',
+             'Halifax'],
+    "Ecozone": ['Pacific Maritime', 'Pacific Maritime', 'Pacific Maritime', 'Pacific Maritime', 'Montane Cordillera',
+                  'Prairie', 'Prairie', 'Prairie', 'Prairie', 'Prairie', 'Prairie', 'Mixedwood Plain', 'Mixedwood Plain',
+                  'Mixedwood Plain', 'Mixedwood Plain', 'Mixedwood Plain', 'Mixedwood Plain', 'Mixedwood Plain',
+                  'Mixedwood Plain', 'Mixedwood Plain', 'Mixedwood Plain', 'Mixedwood Plain', 'Mixedwood Plain',
+                  'Mixedwood Plain', 'Mixedwood Plain', 'Mixedwood Plain', 'Mixedwood Plain', 'Mixedwood Plain',
+                  'Mixedwood Plain', 'Atlantic Maritime', 'Atlantic Maritime', 'Atlantic Maritime']
+}
+ecozone_df = pd.DataFrame(data_ecozone)
+
+city_to_ecozone = dict(zip(ecozone_df['City'], ecozone_df['Ecozone']))
+df['Ecozone'] = df['City'].map(city_to_ecozone)
+print(df.head())
 
 # Ensure DBH is numeric and drop NaN values
 df['DBH'] = pd.to_numeric(df['DBH'], errors='coerce')
@@ -25,10 +64,24 @@ cities = df['City'].unique()
 all_midpoints = []
 all_proportions = []
 
-## Find Median DBH for each value of City
+## Find Median DBH
+# For each city
 median_dbh_per_city = df.groupby('City')['DBH'].median().reset_index()
 print(median_dbh_per_city)
+city_skewness = df.groupby('City')['DBH'].apply(lambda x: skew(x, nan_policy='omit')).reset_index()
+print(city_skewness)
 
+# For each region
+median_dbh_per_region = df.groupby('Region')['DBH'].median().reset_index()
+print(median_dbh_per_region)
+region_skewness = df.groupby('Region')['DBH'].apply(lambda x: skew(x, nan_policy='omit')).reset_index()
+print(region_skewness)
+
+# For each ecozone
+median_dbh_per_ecozone = df.groupby('Ecozone')['DBH'].median().reset_index()
+print(median_dbh_per_ecozone)
+ecozone_skewness = df.groupby('Ecozone')['DBH'].apply(lambda x: skew(x, nan_policy='omit')).reset_index()
+print(ecozone_skewness)
 
 ## Create histograms for the DBH distributions of each city (Urban Forest Diameter Class Distributions)
 # Loop over each city to create histograms and curve plots
