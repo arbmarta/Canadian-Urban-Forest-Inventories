@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import gaussian_kde
+import matplotlib.lines as mlines
 
 df = pd.read_csv("cleaned_master.csv", low_memory=False)
 excluded_cities = ['Maple Ridge', 'New Westminster', 'Peterborough', 'Halifax']
