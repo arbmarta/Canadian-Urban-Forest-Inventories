@@ -1,0 +1,51 @@
+# This code is based on the work of Morgenroth et al. (2020) (DOI: 10.3390/f11020135)
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import gaussian_kde
+
+df = pd.read_csv("cleaned_master.csv", low_memory=False)
+excluded_cities = ['Maple Ridge', 'New Westminster', 'Peterborough', 'Halifax']
+df = df[~df['City'].isin(excluded_cities)]
+
+# Ensure DBH is numeric and drop NaN values
+df['DBH'] = pd.to_numeric(df['DBH'], errors='coerce')
+df = df.dropna(subset=['DBH'])
+
+## Create histograms for the DBH distributions of each city
+bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, np.inf]
+
+cities = df['City'].unique()
+
+# Loop over each city to create histograms and curve plots
+for city in cities:
+    city_data = df[df['City'] == city]
+
+    if len(city_data) == 0:
+        continue  # Skip if there are no valid DBH values for the city
+
+    # Create histogram with custom bins
+    plt.figure(figsize=(8, 6))
+
+    # Restrict x-axis to maximum of 150 cm
+    sns.histplot(city_data['DBH'], bins=bins, kde=False, color='skyblue')
+
+    # Fit and plot the KDE (Kernel Density Estimate) curve
+    kde = gaussian_kde(city_data['DBH'])
+
+    # Restrict the x-range for the KDE to be within the defined bin range
+    x_range = np.linspace(0, 150, 1000)  # Limit the KDE to 150 cm
+    plt.plot(x_range, kde(x_range) * len(city_data['DBH']) * (bins[1] - bins[0]), color='red', lw=2)
+
+    # Set x-axis limit to match the bins
+    plt.xlim(0, 150)
+
+    # Add titles and labels
+    plt.title(f'DBH Histogram with Curve for {city}')
+    plt.xlabel('DBH (cm)')
+    plt.ylabel('Frequency')
+
+    # Show the plot
+    plt.show()
