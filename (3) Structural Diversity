@@ -54,35 +54,46 @@ for city in cities:
     # Show the plot
     plt.show()
 
-## Comparison of Diameter Class Distributions Against Ideal Distributions
-# Plot aggregated DBH distribution
-plt.figure(figsize=(10, 6))
-sns.histplot(df['DBH'], bins=bins, kde=False, color='skyblue', stat='density')
+## Comparison of Diameter Class Distributions Against Richards Distribution
+plt.figure(figsize=(12, 6)) #
 
-# Fit and plot a line of best fit (KDE curve)
-kde = gaussian_kde(df['DBH'])
-x_range = np.linspace(0, 150, 1000)
-plt.plot(x_range, kde(x_range), color='red', lw=2, label='Aggregated DBH distribution (KDE)')
+# Richards data points and line function
+richards_midpoints = [10, 30, 50, 70]
+richards_values = [40, 30, 20, 10]
+x = np.linspace(0, 100, 6)
+y = -0.5 * x + 45
 
-# Mid-points for ideal diameter class distributions from Richards and Millward & Sabir
-richards_midpoints = [5, 15, 25, 35, 45, 55, 65, 75, 85, 95, 105, 115, 125, 135, 145]
-millward_sabir_midpoints = [7.5, 17.5, 27.5, 37.5, 47.5, 57.5, 67.5, 77.5, 87.5, 97.5]
+# Plot Richards data and line
+plt.plot(richards_midpoints, richards_values, 'bs-', label='Richards Data')
+plt.plot(x, y, 'b-', label='Line: y = -0.5x + 45')
 
-# Plot ideal midpoints (Richards)
-plt.plot(richards_midpoints, np.full(len(richards_midpoints), 0.02), 'go-', label='Richards [15]')
+# Loop through each city and calculate DBH proportions
+for city in cities:
+    city_data = df[df['City'] == city]
 
-# Plot ideal midpoints (Millward & Sabir)
-plt.plot(millward_sabir_midpoints, np.full(len(millward_sabir_midpoints), 0.015), 'bo-', label='Millward & Sabir [11]')
+    # Bin the DBH values and calculate the proportion in each bin
+    city_data['DBH_bins'] = pd.cut(city_data['DBH'], bins=bins)
+    bin_counts = city_data['DBH_bins'].value_counts().sort_index()
 
-# Add labels and title
-plt.title('Figure 4: Aggregated DBH Distribution and Line of Best Fit for 38 Cities')
+    # Calculate the proportion of the total population in each bin
+    proportions = bin_counts / bin_counts.sum() * 100  # Convert to percentages
+
+    # Plot the proportions for this city (only markers, no lines)
+    plt.plot(bin_midpoints, proportions, 'o', markersize=4, markerfacecolor='k', markeredgewidth=0, label=f'{city} Data')
+
+# Legend
+inventory_data_handle = mlines.Line2D([], [], color='k', marker='o', linestyle='None', markersize=8, label='Inventory Data')
+best_fit_handle = mlines.Line2D([], [], color='k', linestyle='-', markersize=8, label='Line of Best Fit')
+richards_handle = mlines.Line2D([], [], color='b', marker='s', linestyle='-', markersize=8, label='Richards')
+plt.legend(handles=[inventory_data_handle, best_fit_handle, richards_handle])
+
+# Customize plot
+plt.xlim(0, 150)
+plt.ylim(0, 70)
+plt.title('Aggregated DBH Distribution and Line of Best Fit')
 plt.xlabel('DBH (cm)')
-plt.ylabel('Density')
-
-# Show legend
-plt.legend()
-
-# Show the plot
+plt.ylabel('Proportion of Total Population (%)')
+plt.grid(False)
 plt.show()
 
 
