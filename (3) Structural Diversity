@@ -1,4 +1,4 @@
-#  This code is based on the work of Morgenroth et al. (2020) (DOI: 10.3390/f11020135)
+# This code is based on the work of Morgenroth et al. (2020) (DOI: 10.3390/f11020135)
 
 import pandas as pd
 import numpy as np
@@ -17,6 +17,7 @@ df = df.dropna(subset=['DBH'])
 # Create bins
 bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, np.inf]
 n_classes = 11 # Number of DBH classes for each city
+bin_midpoints = [(bins[i] + bins[i+1]) / 2 for i in range(len(bins)-1)]
 
 # Define cities
 cities = df['City'].unique()
@@ -54,6 +55,36 @@ for city in cities:
     plt.show()
 
 ## Comparison of Diameter Class Distributions Against Ideal Distributions
+# Plot aggregated DBH distribution
+plt.figure(figsize=(10, 6))
+sns.histplot(df['DBH'], bins=bins, kde=False, color='skyblue', stat='density')
+
+# Fit and plot a line of best fit (KDE curve)
+kde = gaussian_kde(df['DBH'])
+x_range = np.linspace(0, 150, 1000)
+plt.plot(x_range, kde(x_range), color='red', lw=2, label='Aggregated DBH distribution (KDE)')
+
+# Mid-points for ideal diameter class distributions from Richards and Millward & Sabir
+richards_midpoints = [5, 15, 25, 35, 45, 55, 65, 75, 85, 95, 105, 115, 125, 135, 145]
+millward_sabir_midpoints = [7.5, 17.5, 27.5, 37.5, 47.5, 57.5, 67.5, 77.5, 87.5, 97.5]
+
+# Plot ideal midpoints (Richards)
+plt.plot(richards_midpoints, np.full(len(richards_midpoints), 0.02), 'go-', label='Richards [15]')
+
+# Plot ideal midpoints (Millward & Sabir)
+plt.plot(millward_sabir_midpoints, np.full(len(millward_sabir_midpoints), 0.015), 'bo-', label='Millward & Sabir [11]')
+
+# Add labels and title
+plt.title('Figure 4: Aggregated DBH Distribution and Line of Best Fit for 38 Cities')
+plt.xlabel('DBH (cm)')
+plt.ylabel('Density')
+
+# Show legend
+plt.legend()
+
+# Show the plot
+plt.show()
+
 
 ## Structural Diversity Index
 def calculate_shannon_wiener(city_data, bins, n_classes):
