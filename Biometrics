@@ -1,0 +1,158 @@
+import pandas as pd
+import numpy as np
+
+master = pd.read_csv("cleaned_master.csv", low_memory=False)
+census_ctuid = pd.read_excel("Census Dataset - CTUID.xlsx")
+census_dauid = pd.read_excel("Census Dataset - DAUID.xlsx")
+
+# Print the list of headers
+headers = master.columns.tolist()
+print("List of headers in Master.csv:")
+print(headers)
+
+# Create new dataframes
+unique_DAUID = master['DAUID'].unique()
+DA_df = pd.DataFrame(unique_DAUID, columns=['DAUID'])
+unique_CTUID = master['CTUID'].unique()
+CT_df = pd.DataFrame(unique_CTUID, columns=['CTUID'])
+
+# Add land area
+DA_df = DA_df.merge(census_dauid[['DAUID', 'Land Area (Sq Km)']], on='DAUID', how='left')
+CT_df = CT_df.merge(census_ctuid[['CTUID', 'Land Area (Sq Km)']], on='CTUID', how='left')
+
+# Calculate tree count
+## Calculate tree count per square kilometer for DAUID
+tree_counts_dauid = master['DAUID'].value_counts().reset_index()
+tree_counts_dauid.columns = ['DAUID', 'Tree Count']
+DA_df = DA_df.merge(tree_counts_dauid, on='DAUID', how='left')
+DA_df['Tree Count per Sq Km'] = DA_df['Tree Count'] / DA_df['Land Area (Sq Km)']
+DA_df.drop(columns=['Tree Count'], inplace=True)
+
+## Calculate tree count per square kilometer for CTUID
+tree_counts_ctuid = master['CTUID'].value_counts().reset_index()
+tree_counts_ctuid.columns = ['CTUID', 'Tree Count']
+CT_df = CT_df.merge(tree_counts_ctuid, on='CTUID', how='left')
+CT_df['Tree Count per Sq Km'] = CT_df['Tree Count'] / CT_df['Land Area (Sq Km)']
+CT_df.drop(columns=['Tree Count'], inplace=True)
+
+# Calculate basal area
+## Calculate basal area per square kilometer for DAUID
+basal_area_DA = master.groupby('DAUID')['Basal Area'].sum().reset_index()
+DA_df = DA_df.merge(basal_area_DA, on='DAUID', how='left')
+DA_df['Basal Area per Sq Km'] = DA_df['Basal Area'] / DA_df['Land Area (Sq Km)']
+DA_df.drop(columns=['Basal Area'], inplace=True)
+
+## Calculate basal area per square kilometer for CTUID
+basal_area_CT = master.groupby('CTUID')['Basal Area'].sum().reset_index()
+CT_df = CT_df.merge(basal_area_CT, on='CTUID', how='left')
+CT_df['Basal Area per Sq Km'] = CT_df['Basal Area'] / CT_df['Land Area (Sq Km)']
+CT_df.drop(columns=['Basal Area'], inplace=True)
+
+# Calculate median DBH
+## Calculate median DBH for DAUID
+median_dbh_DA = master.groupby('DAUID')['DBH'].median().reset_index()
+median_dbh_DA.columns = ['DAUID', 'Median DBH']
+DA_df = DA_df.merge(median_dbh_DA, on='DAUID', how='left')
+
+## Calculate median DBH for CTUID
+median_dbh_CT = master.groupby('CTUID')['DBH'].median().reset_index()
+median_dbh_CT.columns = ['CTUID', 'Median DBH']
+CT_df = CT_df.merge(median_dbh_CT, on='CTUID', how='left')
+
+# Add city names
+city_DA = master[['DAUID', 'City']].drop_duplicates()
+DA_df = DA_df.merge(city_DA, on='DAUID', how='left')
+city_CT = master[['CTUID', 'City']].drop_duplicates()
+CT_df = CT_df.merge(city_CT, on='CTUID', how='left')
+
+# Calculate biodiversity index
+master = master[master['Botanical Name'].str.strip().astype(bool)]
+
+# Genus count
+def extract_genus(row):
+    if isinstance(row['Botanical Name'], str):
+        if row['City'] in ['Moncton']:
+            return row['Botanical Name'][:3]
+        if row['City'] in ['Mississauga']:
+            return row['Botanical Name'][:2]
+        if row['City'] in ['Halifax']:
+            return row['Botanical Name'][:2]
+        elif len(row['Botanical Name'].split()) > 0:
+            return row['Botanical Name'].split()[0]
+    return np.nan
+
+# Apply the function using .loc to avoid the warning
+master.loc[:, 'Genus'] = master.apply(extract_genus, axis=1)
+
+# Species count
+def extract_species(row):
+    if isinstance(row['Botanical Name'], str):
+        if row['City'] in ['Moncton']:
+            return row['Botanical Name'][:6]
+        if row['City'] in ['Mississauga']:
+            return row['Botanical Name'][:4]
+        if row['City'] in ['Halifax']:
+            return row['Botanical Name'][:4]
+        else:
+            words = row['Botanical Name'].split()
+            if len(words) > 1:
+                return ' '.join(words[:2])  # Join the first two words
+            elif len(words) == 1:
+                return words[0]  # If there's only one word, return it
+    return np.nan  # Handle cases where 'Botanical Name' is not a string or is empty
+
+# Apply the function using .loc to avoid the warning
+master.loc[:, 'Species'] = master.apply(extract_species, axis=1)
+
+## Define the Shannon-Weaver Index function (high index value = high biodiversity)
+def shannon_weaver_index(group):
+    group = group[group.str.strip().astype(bool)]  # Exclude blank rows
+    proportions = group.value_counts(normalize=True)
+    return -sum(proportions * np.log(proportions))
+
+## Calculate Shannon-Weaver index for each DAUID and CTUID within each city
+shan_gen_dauid = master.groupby(['City', 'DAUID'])['Genus'].apply(shannon_weaver_index).reset_index()
+shan_gen_dauid.columns = ['City', 'DAUID', 'Shannon-Weaver Index']
+shan_gen_ctuid = master.groupby(['City', 'CTUID'])['Genus'].apply(shannon_weaver_index).reset_index()
+shan_gen_ctuid.columns = ['City', 'CTUID', 'Shannon-Weaver Index']
+shan_spec_dauid = master.groupby(['City', 'DAUID'])['Species'].apply(shannon_weaver_index).reset_index()
+shan_spec_dauid.columns = ['City', 'DAUID', 'Shannon-Weaver Index']
+shan_spec_ctuid = master.groupby(['City', 'CTUID'])['Species'].apply(shannon_weaver_index).reset_index()
+shan_spec_ctuid.columns = ['City', 'CTUID', 'Shannon-Weaver Index']
+
+## Merge Shannon-Weaver index with DA_df and CT_df
+DA_df = DA_df.merge(shan_gen_dauid, on=['City', 'DAUID'], how='left')
+CT_df = CT_df.merge(shan_gen_ctuid, on=['City', 'CTUID'], how='left')
+DA_df = DA_df.merge(shan_spec_dauid, on=['City', 'DAUID'], how='left')
+CT_df = CT_df.merge(shan_spec_ctuid, on=['City', 'CTUID'], how='left')
+
+# Remove Median DBH and Basal Area from cities that don't measure DBH
+## Count the number of non-null Median DBH rows before nullifying
+non_null_median_dbh_before_DA = DA_df['Median DBH'].notnull().sum()
+non_null_median_dbh_before_CT = CT_df['Median DBH'].notnull().sum()
+
+## Set Median DBH and Basal Area per Sq Km to null for specific cities
+cities_to_nullify = ["Maple Ridge", "Peterborough", "New Westminster"]
+DA_df.loc[DA_df['City'].isin(cities_to_nullify), ['Median DBH', 'Basal Area per Sq Km']] = np.nan
+CT_df.loc[CT_df['City'].isin(cities_to_nullify), ['Median DBH', 'Basal Area per Sq Km']] = np.nan
+
+## Count the number of non-null Median DBH rows after nullifying
+non_null_median_dbh_after_DA = DA_df['Median DBH'].notnull().sum()
+non_null_median_dbh_after_CT = CT_df['Median DBH'].notnull().sum()
+
+## Check the nullification
+count_cities_to_nullify_before_DA = DA_df['City'].isin(cities_to_nullify).sum()
+count_cities_to_nullify_before_CT = CT_df['City'].isin(cities_to_nullify).sum()
+print(f"DA nullifying check (should be 0): {(non_null_median_dbh_before_DA - non_null_median_dbh_after_DA) - count_cities_to_nullify_before_DA}")
+print(f"CT nullifying check (should be 0): {(non_null_median_dbh_before_CT - non_null_median_dbh_after_CT) - count_cities_to_nullify_before_CT}")
+
+# Display the new DataFrames
+print("Unique DAUID DataFrame:")
+print(DA_df.head())
+print("Unique CTUID DataFrame:")
+print(CT_df.head())
+
+# Save the final results to CSV files
+DA_df.to_csv("Dissemination Areas.csv", index=False)
+CT_df.to_csv("Census Tracts.csv", index=False)
+print("Final results have been saved to 'Dissemination Areas.csv' and 'Census Tracts.csv'.")
