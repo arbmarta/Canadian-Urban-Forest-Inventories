@@ -1,4 +1,4 @@
-#  This code is based on the work of Morgenroth et al. (2020) (DOI: 10.3390/f11020135)
+# This code is based on the work of Morgenroth et al. (2020) (DOI: 10.3390/f11020135)
 
 import pandas as pd
 import numpy as np
@@ -61,6 +61,8 @@ bin_midpoints = [(bins[i] + bins[i+1]) / 2 for i in range(len(bins)-1)]
 
 # Define cities and prepare lists for all midpoints and proportions
 cities = df['City'].unique()
+ecozones = df['Ecozone'].unique()
+regions = df['Region'].unique()
 all_midpoints = []
 all_proportions = []
 
@@ -109,6 +111,70 @@ for city in cities:
 
     # Add titles and labels
     plt.title(f'DBH Histogram with Curve for {city}')
+    plt.xlabel('DBH (cm)')
+    plt.ylabel('Frequency')
+
+    # Show the plot
+    plt.show()
+
+## Create histograms for the DBH distributions of each region (Urban Forest Diameter Class Distributions)
+# Loop over each city to create histograms and curve plots
+for region in regions:
+    region_data = df[df['Region'] == region]
+
+    if len(region_data) == 0:
+        continue  # Skip if there are no valid DBH values for the city
+
+    # Create histogram with custom bins
+    plt.figure(figsize=(8, 6))
+
+    # Restrict x-axis to maximum of 150 cm
+    sns.histplot(region_data['DBH'], bins=bins, kde=False, color='skyblue')
+
+    # Fit and plot the KDE (Kernel Density Estimate) curve
+    kde = gaussian_kde(region_data['DBH'])
+
+    # Restrict the x-range for the KDE to be within the defined bin range
+    x_range = np.linspace(0, 150, 1000)  # Limit the KDE to 150 cm
+    plt.plot(x_range, kde(x_range) * len(region_data['DBH']) * (bins[1] - bins[0]), color='red', lw=2)
+
+    # Set x-axis limit to match the bins
+    plt.xlim(0, 150)
+
+    # Add titles and labels
+    plt.title(f'DBH Histogram with Curve for {region}')
+    plt.xlabel('DBH (cm)')
+    plt.ylabel('Frequency')
+
+    # Show the plot
+    plt.show()
+
+## Create histograms for the DBH distributions of each ecozone (Urban Forest Diameter Class Distributions)
+# Loop over each city to create histograms and curve plots
+for ecozone in ecozones:
+    ecozone_data = df[df['Ecozone'] == ecozone]
+
+    if len(ecozone_data) == 0:
+        continue  # Skip if there are no valid DBH values for the city
+
+    # Create histogram with custom bins
+    plt.figure(figsize=(8, 6))
+
+    # Restrict x-axis to maximum of 150 cm
+    sns.histplot(ecozone_data['DBH'], bins=bins, kde=False, color='skyblue')
+
+    # Fit and plot the KDE (Kernel Density Estimate) curve
+    kde = gaussian_kde(ecozone_data['DBH'])
+
+    # Restrict the x-range for the KDE to be within the defined bin range
+    x_range = np.linspace(0, 150, 1000)  # Limit the KDE to 150 cm
+    plt.plot(x_range, kde(x_range) * len(ecozone_data['DBH']) * (bins[1] - bins[0]), color='red', lw=2)
+
+    # Set x-axis limit to match the bins
+    plt.xlim(0, 150)
+
+    # Add titles and labels
+    plt.title(f'DBH Histogram with Curve for {ecozone}')
     plt.xlabel('DBH (cm)')
     plt.ylabel('Frequency')
 
