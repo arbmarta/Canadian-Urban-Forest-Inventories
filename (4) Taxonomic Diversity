@@ -61,3 +61,12 @@ for genus in genus_list:
 # Quantify the number of genera
 unique_genus_count = len(genus_list)
 print(f"\nTotal number of unique genera: {unique_genus_count}")
+
+
+### @ Lukas - notes to add
+# Determine top six species for each City
+# Calculate what proportion of the street tree inventory for a given City is made up of their most common (top) six species
+# Calculate shannon index and inverse simpson index for species, genus, and family
+# Determine families for each genera
+
+
