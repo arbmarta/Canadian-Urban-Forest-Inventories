@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load the merged CSV file
-merged_df = pd.read_csv("merged_inventory.csv", low_memory=False)
+merged_df = pd.read_csv("data/wd/merged_inventory.csv", low_memory=False)
 
 # Remove Dead and Stump values in Botanical Name
 initial_count = merged_df.shape[0]
@@ -65,7 +65,7 @@ blank_ctuid_df_after_filling = filtered_df[filtered_df["CTUID"].isna()]
 num_instances_blank_ctuid_after_filling = blank_ctuid_df_after_filling.shape[0]
 
 # Save the updated DataFrame to the master CSV file
-filtered_df.to_csv("cleaned_master.csv", index=False)
+filtered_df.to_csv("data/wd/cleaned_master.csv", index=False)
 
 # Print the counts
 print(f"Number of trees where CTUID is blank after filling: {num_instances_blank_ctuid_after_filling}")

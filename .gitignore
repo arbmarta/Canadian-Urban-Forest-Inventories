@@ -2,4 +2,4 @@ data/*
 !data/cities/readme.txt
 !data/WCVP/readme.txt
 !data/tree codes/*
-workspace/*
+/.idea/
