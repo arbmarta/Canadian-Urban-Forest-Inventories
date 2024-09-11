@@ -1,2 +1,4 @@
 data/*
-!data/readme.txt
+!data/cities/readme.txt
+!data/WCVP/readme.txt
+workspace/*
