@@ -36,7 +36,37 @@ master_df = pd.concat(data_frames, ignore_index=True)
 master_df.loc[master_df['City'] == 'Vancouver', 'DBH'] *= 2.54
 
 ## Species codes to scientific binomials
+# Load the data dictionaries
+Halifax_dict = pd.read_csv('Halifax.csv')
+Mississauga_dict = pd.read_csv('Mississauga.csv')
+Moncton_dict = pd.read_csv('Moncton.csv')
+Ottawa_dict = pd.read_csv('Ottawa.csv')
+Toronto_dict = pd.read_csv('Toronto.csv')
 
+# Replace the species codes
+def replace_botanical_name(row):
+    if row['City'] == 'Halifax':
+        code_dict = Halifax_dict
+    elif row['City'] == 'Mississauga':
+        code_dict = Mississauga_dict
+    elif row['City'] == 'Moncton':
+        code_dict = Moncton_dict
+    elif row['City'] == 'Ottawa':
+        code_dict = Ottawa_dict
+    elif row['City'] == 'Toronto':
+        code_dict = Toronto_dict
+    else:
+        return row['Botanical Name']  # If city doesn't match, return the original Botanical Name
+    
+    # Try to match the code and return the corresponding botanical name
+    match = code_dict[code_dict['code'] == row['Botanical Name']]
+    if not match.empty:
+        return match['botanical name'].values[0]
+    else:
+        return row['Botanical Name']  # If no match is found, keep the original value
+
+# Apply the function to the DataFrame
+master_df['Botanical Name'] = master_df.apply(replace_botanical_name, axis=1)
 
 Path("data/wd").mkdir(exist_ok=True)
 
