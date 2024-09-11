@@ -1,5 +1,9 @@
 data/*
+!data/cities/
+!data/WCVP/
+data/cities/*
 !data/cities/readme.txt
+data/WCVP/*
 !data/WCVP/readme.txt
 !data/tree codes/*
-/.idea/
+.idea/
