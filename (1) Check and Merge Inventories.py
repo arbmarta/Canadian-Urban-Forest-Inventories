@@ -8,8 +8,7 @@ import pandas as pd
 cities = ["Kelowna", "Maple Ridge", "New Westminster", "Vancouver", "Victoria", "Calgary", "Edmonton", "Lethbridge",
           "Strathcona County", "Regina", "Winnipeg", "Ajax", "Burlington", "Guelph", "Kingston", "Kitchener",
           "Mississauga", "Niagara Falls", "Ottawa", "Peterborough", "St. Catherines", "Toronto", "Waterloo", "Welland",
-          "Whitby",
-          "Windsor", "Longueuil", "Montreal", "Quebec City", "Fredericton", "Moncton", "Halifax"]
+          "Whitby", "Windsor", "Longueuil", "Montreal", "Quebec City", "Fredericton", "Moncton", "Halifax"]
 
 # Initialize an empty list to hold the data
 data_frames = []
@@ -27,16 +26,17 @@ for city in cities:
     else:
         print(f"{city} file does not exist.")
 
-
-
 if len(data_frames) <= 0:
     raise ValueError("No cities XLSX files loaded... Ensure they have been placed in data/cities subdir.")
 
 # Concatenate all DataFrames
 master_df = pd.concat(data_frames, ignore_index=True)
 
-# Covert inches to cm in Vancouver
+# Convert inches to cm in Vancouver
 master_df.loc[master_df['City'] == 'Vancouver', 'DBH'] *= 2.54
+
+## Species codes to scientific binomials
+
 
 Path("data/wd").mkdir(exist_ok=True)
 
