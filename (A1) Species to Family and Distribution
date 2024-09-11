@@ -1,0 +1,19 @@
+# From the Royal Botanical Gardens (https://sftp.kew.org/pub/data-repositories/WCVP/)
+
+import pandas as pd
+
+df1 = pd.read_csv("wcvp_names.csv", sep="|", header=0, quoting=3, encoding="utf-8", keep_default_na=False)
+df2 = pd.read_csv("wcvp_distribution.csv", sep="|", header=0, quoting=3, encoding="utf-8", keep_default_na=False)
+
+# Merge the two DataFrames based on the 'plant_name_id' column
+merged_df = pd.merge(df1, df2, on='plant_name_id', how='inner')
+
+# Display the headers of the merged DataFrame
+print(merged_df.columns)
+
+# reduce columns
+columns_to_keep = ['plant_name_id', 'taxon_rank', 'family', 'genus_hybrid', 'genus', species_hybrid', 'species', 'taxon_name', 'continent', 'region', 'area', 'introduced', 'extinct']
+filtered_df = merged_df[columns_to_keep]
+
+# Display the filtered DataFrame
+print(merged_df.columns)
