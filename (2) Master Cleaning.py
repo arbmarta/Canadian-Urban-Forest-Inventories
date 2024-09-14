@@ -6,7 +6,7 @@ merged_df = pd.read_csv("data/wd/merged_inventory.csv", low_memory=False)
 # Remove Dead and Stump values in Botanical Name
 initial_count = merged_df.shape[0]
 merged_df["Botanical Name"] = merged_df["Botanical Name"].str.lower()
-filtered_df = merged_df[~merged_df["Botanical Name"].isin(["dead", "stump", "shrub", "shrubs", "vine", "vines", "hedge"])]
+filtered_df = merged_df[~merged_df["Botanical Name"].isin(["dead", "stump", "shrub", "shrubs", "vine", "vines", "hedge", "missing"])]
 final_count = filtered_df.shape[0]
 
 # Clean the DBH column
