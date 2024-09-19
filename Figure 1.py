@@ -9,7 +9,7 @@ def plot_tree_population_curves():
 
     x = np.linspace(0, 80, 100)
 
-    # Type I (Youthful)
+    ## Type I (Youthful)
     y_youthful = 0.9585 * np.exp(-6.6757 * (x / 80)) + 0.0341  # Adjusting for new x scale
     youthful_area = simpson(y_youthful, x)
 
@@ -17,13 +17,13 @@ def plot_tree_population_curves():
     y_youthful_normalized = y_youthful / youthful_area
     ax.plot(x, y_youthful_normalized, lw=2, label='Youthful (Type I)', color='blue')
 
-    # Type II (Maturing)
+    ## Type II (Maturing)
     x_sampled = np.array([0, 4.77, 10.44, 15.04, 18.26, 22.79, 30.61, 45.18, 59.09, 80])
     y_sampled = np.array([
-        0.5286624181536111, 0.658174130721433, 0.7091295213343511, 0.6454352393328243,
-        0.5286624181536111, 0.3736730977500888, 0.22717625497796085, 0.11677287949305219,
-        0.05944804318582957, 0.029724079906753857
-    ])
+        0.4286624181536111, 0.558174130721433, 0.6091295213343511, 0.7454352393328243,
+        0.6286624181536111, 0.4736730977500888, 0.32717625497796085, 0.21677287949305219,
+        0.15944804318582957, 0.059724079906753857
+    ]) # Alex changed by taking -.1 from any left of the semi-mature and +.1 right of the semi-mature #Sept18
 
     x_spline = np.linspace(min(x_sampled), max(x_sampled), 300)  # Generate more x values for a smooth curve
     spline = make_interp_spline(x_sampled, y_sampled, k=3)  # Cubic spline (k=3)
@@ -34,8 +34,8 @@ def plot_tree_population_curves():
     y_spline_normalized = y_spline / maturing_area
     ax.plot(x_spline, y_spline_normalized, lw=2, label='Maturing (Type II)', color='green')
 
-    # Type III (Mature)
-    y_mature = np.full_like(x, 0.33)  # Original constant value
+    ## Type III (Mature)
+    y_mature = np.full_like(x, 0.2)  # Original constant value
     mature_area = simpson(y_mature, x)
 
     # Normalize the area of Type III to match Type I
