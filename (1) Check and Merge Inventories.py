@@ -13,8 +13,9 @@ cities = ["Kelowna", "Maple Ridge", "New Westminster", "Vancouver", "Victoria", 
 data_frames = []
 
 # Process each city file
+file_path_inventories = r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Inventories'
 for city in cities:
-    file_name = f"data/cities/{city}.xlsx"
+    file_name = fr'{file_path_inventories}\{city}.xlsx'
 
     # Check if the file exists
     if os.path.exists(file_name):
@@ -36,11 +37,13 @@ master_df.loc[master_df['City'] == 'Vancouver', 'DBH'] *= 2.54
 
 ## Species codes to scientific binomials
 # Load the data dictionaries
-Halifax_dict = pd.read_csv('Halifax.csv')
-Mississauga_dict = pd.read_csv('Mississauga.csv')
-Moncton_dict = pd.read_csv('Moncton.csv')
-Ottawa_dict = pd.read_csv('Ottawa.csv')
-Toronto_dict = pd.read_csv('Toronto.csv')
+file_path_species_codes = r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Tree Codes'
+Halifax_dict = pd.read_csv(fr'{file_path_species_codes}\Halifax.csv')
+Mississauga_dict = pd.read_csv(fr'{file_path_species_codes}\Mississauga.csv')
+Moncton_dict = pd.read_csv(fr'{file_path_species_codes}\Moncton.csv')
+Ottawa_dict = pd.read_csv(fr'{file_path_species_codes}\Ottawa.csv')
+Toronto_dict = pd.read_csv(fr'{file_path_species_codes}\Toronto.csv')
+
 
 # Replace the species codes
 def replace_botanical_name(row):
@@ -56,13 +59,14 @@ def replace_botanical_name(row):
         code_dict = Toronto_dict
     else:
         return row['Botanical Name']  # If city doesn't match, return the original Botanical Name
-    
+
     # Try to match the code and return the corresponding botanical name
-    match = code_dict[code_dict['code'] == row['Botanical Name']]
+    match = code_dict[code_dict['Code'] == row['Botanical Name']]
     if not match.empty:
-        return match['botanical name'].values[0]
+        return match['Botanical Name'].values[0]
     else:
         return row['Botanical Name']  # If no match is found, keep the original value
+
 
 # Apply the function to the DataFrame
 master_df['Botanical Name'] = master_df.apply(replace_botanical_name, axis=1)
