@@ -1,11 +1,12 @@
+# Creates WCVP.csv from Distribution.csv and Names.csv
 # From the Royal Botanical Gardens (https://sftp.kew.org/pub/data-repositories/WCVP/)
 
 import pandas as pd
 
 # Import datasets
-df_names = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Tree Nativity and Families\Distribution.csv',
+df_names = pd.read_csv(r'{file_path}\Distribution.csv',
                        sep="|", header=0, quoting=3, encoding="utf-8", keep_default_na=False)
-df_distribution = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Tree Nativity and Families\Names.csv', sep="|", header=0, quoting=3, encoding="utf-8",
+df_distribution = pd.read_csv(r'{file_path}\Names.csv', sep="|", header=0, quoting=3, encoding="utf-8",
                               keep_default_na=False)
 
 # Merge the two DataFrames based on the 'plant_name_id' column
@@ -37,4 +38,4 @@ WCVP_df = filtered_df[columns_to_keep]
 
 # Display the filtered DataFrame
 print(WCVP_df.columns)
-WCVP_df.to_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Tree Nativity and Families\WCVP.csv', index=False)
+WCVP_df.to_csv(r'{file_path}\WCVP.csv', index=False)
