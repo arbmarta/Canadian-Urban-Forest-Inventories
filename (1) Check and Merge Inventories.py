@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 import pandas as pd
 
 # All datasets have, in order, Botanical Name, DBH, DAUID, CTUID, and City.
@@ -69,6 +68,6 @@ def replace_botanical_name(row):
 master_df['Botanical Name'] = master_df.apply(replace_botanical_name, axis=1) # Apply the function to the DataFrame
 
 # Save the master DataFrame to a CSV file
-master_df.to_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Master Data Frame.csv', index=False)
+master_df.to_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Master Dataset.csv', index=False)
 
 print("Merged CSV file created successfully.")
