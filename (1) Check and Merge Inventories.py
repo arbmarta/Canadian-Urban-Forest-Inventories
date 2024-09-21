@@ -44,7 +44,6 @@ Moncton_dict = pd.read_csv(fr'{file_path_species_codes}\Moncton.csv')
 Ottawa_dict = pd.read_csv(fr'{file_path_species_codes}\Ottawa.csv')
 Toronto_dict = pd.read_csv(fr'{file_path_species_codes}\Toronto.csv')
 
-
 # Replace the species codes
 def replace_botanical_name(row):
     if row['City'] == 'Halifax':
@@ -67,13 +66,9 @@ def replace_botanical_name(row):
     else:
         return row['Botanical Name']  # If no match is found, keep the original value
 
-
-# Apply the function to the DataFrame
-master_df['Botanical Name'] = master_df.apply(replace_botanical_name, axis=1)
-
-Path("data/wd").mkdir(exist_ok=True)
+master_df['Botanical Name'] = master_df.apply(replace_botanical_name, axis=1) # Apply the function to the DataFrame
 
 # Save the master DataFrame to a CSV file
-master_df.to_csv("data/wd/merged_inventory.csv", index=False)
+master_df.to_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Master Data Frame.csv', index=False)
 
 print("Merged CSV file created successfully.")
