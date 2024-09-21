@@ -3,20 +3,15 @@
 import pandas as pd
 
 # Import datasets
-df_names = pd.read_csv("data/WCVP/wcvp_names.csv", sep="|", header=0, quoting=3, encoding="utf-8", keep_default_na=False)
-df_distribution = pd.read_csv("data/WCVP/wcvp_distribution.csv", sep="|", header=0, quoting=3, encoding="utf-8", keep_default_na=False)
+df_names = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Tree Nativity and Families\Distribution.csv',
+                       sep="|", header=0, quoting=3, encoding="utf-8", keep_default_na=False)
+df_distribution = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Tree Nativity and Families\Names.csv', sep="|", header=0, quoting=3, encoding="utf-8",
+                              keep_default_na=False)
 
 # Merge the two DataFrames based on the 'plant_name_id' column
 merged_df = pd.merge(df_names, df_distribution, on='plant_name_id', how='inner')
 
 # Display the headers of the merged DataFrame
-print(merged_df.columns)
-
-# reduce columns
-columns_to_keep = ['plant_name_id', 'taxon_rank', 'family', 'genus_hybrid', 'genus', 'species_hybrid', 'species', 'taxon_name', 'region_code_l3', 'introduced', 'extinct']
-filtered_df = merged_df[columns_to_keep]
-
-# Display the filtered DataFrame
 print(merged_df.columns)
 
 #  Reduce the dataset to Canadian locations
@@ -35,3 +30,11 @@ filtered_df = merged_df[merged_df['area_code_l3'].isin(provincial_codes)]
 # Nova Scotia : NSC
 # Newfoundland : NFL
 # Labrador : LAB
+
+# reduce columns
+columns_to_keep = ['plant_name_id', 'taxon_rank', 'family', 'genus_hybrid', 'genus', 'species_hybrid', 'species', 'taxon_name', 'area_code_l3', 'introduced', 'extinct']
+WCVP_df = filtered_df[columns_to_keep]
+
+# Display the filtered DataFrame
+print(WCVP_df.columns)
+WCVP_df.to_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Tree Nativity and Families\WCVP.csv', index=False)
