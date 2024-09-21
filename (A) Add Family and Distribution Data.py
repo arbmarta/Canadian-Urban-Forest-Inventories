@@ -4,9 +4,9 @@
 import pandas as pd
 
 # Import datasets
-df_names = pd.read_csv(r'{file_path}\Distribution.csv',
+df_names = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Tree Nativity and Families\Distribution.csv',
                        sep="|", header=0, quoting=3, encoding="utf-8", keep_default_na=False)
-df_distribution = pd.read_csv(r'{file_path}\Names.csv', sep="|", header=0, quoting=3, encoding="utf-8",
+df_distribution = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Tree Nativity and Families\Names.csv', sep="|", header=0, quoting=3, encoding="utf-8",
                               keep_default_na=False)
 
 # Merge the two DataFrames based on the 'plant_name_id' column
@@ -33,9 +33,10 @@ filtered_df = merged_df[merged_df['area_code_l3'].isin(provincial_codes)]
 # Labrador : LAB
 
 # reduce columns
-columns_to_keep = ['plant_name_id', 'taxon_rank', 'family', 'genus_hybrid', 'genus', 'species_hybrid', 'species', 'taxon_name', 'area_code_l3', 'introduced', 'extinct']
+columns_to_keep = ['plant_name_id', 'taxon_rank', 'family', 'genus_hybrid', 'genus', 'species_hybrid', 'species', 'taxon_name', 'area_code_l3', 'introduced']
 WCVP_df = filtered_df[columns_to_keep]
+WCVP_df = WCVP_df.rename(columns={'area_code_l3': 'Province'})
 
 # Display the filtered DataFrame
 print(WCVP_df.columns)
-WCVP_df.to_csv(r'{file_path}\WCVP.csv', index=False)
+WCVP_df.to_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Tree Nativity and Families\Family and Distribution Data.csv', index=False)
