@@ -1,23 +1,30 @@
 import pandas as pd
 
 # Load the merged CSV file
-merged_df = pd.read_csv("data/wd/merged_inventory.csv", low_memory=False)
+merged_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Master Dataset.csv', low_memory=False)
 
-# Remove Dead and Stump values in Botanical Name
+# Clean the Botanical Name column
 initial_count = merged_df.shape[0]
-merged_df["Botanical Name"] = merged_df["Botanical Name"].str.lower()
+merged_df['Botanical Name'] = merged_df['Botanical Name'].str.lower().str.strip()
 filtered_df = merged_df[~merged_df["Botanical Name"].isin(["dead", "stump", "shrub", "shrubs", "vine", "vines", "hedge", "missing"])]
 final_count = filtered_df.shape[0]
 
+def add_spp_if_only_genus(name): # Add spp. to genus-only identification
+    if isinstance(name, str) and len(name.split()) == 1:  # Check if the Botanical Name is a string and has only one word
+        return name + " spp."
+    return name
+
+filtered_df.loc[:, 'Botanical Name'] = filtered_df['Botanical Name'].apply(add_spp_if_only_genus) # Apply the function to the 'Botanical Name' column
+
 # Clean the DBH column
-filtered_df["DBH"] = pd.to_numeric(filtered_df["DBH"], errors='coerce')
+filtered_df.loc[:, "DBH"] = pd.to_numeric(filtered_df["DBH"], errors='coerce')
 filtered_df.loc[filtered_df["DBH"] > 350, "DBH"] = 0
 filtered_df.loc[filtered_df["DBH"] == 0, "DBH"] = pd.NA
 num_rows_with_dbh_0 = filtered_df[filtered_df["DBH"] == 0].shape[0]
 print(f"Number of rows with DBH of 0: {num_rows_with_dbh_0}")
 
 # Calculate basal area
-filtered_df['Basal Area'] = 0.00007854 * (filtered_df['DBH'] ** 2)
+filtered_df.loc[:, 'Basal Area'] = 0.00007854 * (filtered_df['DBH'] ** 2)
 
 # Remove rows where both DAUID and CTUID are missing
 filtered_df = filtered_df[~(filtered_df["DAUID"].isna() & filtered_df["CTUID"].isna())]
@@ -65,11 +72,11 @@ blank_ctuid_df_after_filling = filtered_df[filtered_df["CTUID"].isna()]
 num_instances_blank_ctuid_after_filling = blank_ctuid_df_after_filling.shape[0]
 
 # Save the updated DataFrame to the master CSV file
-filtered_df.to_csv("data/wd/cleaned_master.csv", index=False)
+filtered_df.to_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Filtered Master Dataset.csv', index=False)
+print("Filtered Master Dataset file created successfully.")
 
 # Print the counts
 print(f"Number of trees where CTUID is blank after filling: {num_instances_blank_ctuid_after_filling}")
 print(f"Number of trees after removing trees with missing DAUID and CTUID: {final_count_after_missing_removal}")
 print(f"Number of out-of-city trees removed: {final_count - final_count_after_missing_removal}")
 print(f"Number of dead trees and stumps removed: {initial_count - final_count}")
-print("Filtered and cleaned data saved to cleaned_master.csv.")
