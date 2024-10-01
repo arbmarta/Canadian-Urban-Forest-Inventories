@@ -1,0 +1,113 @@
+# This code is based on the work of Morgenroth et al. (2020) (DOI: 10.3390/f11020135)
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.interpolate import make_interp_spline
+from scipy.optimize import curve_fit
+import seaborn as sns
+from scipy.stats import gaussian_kde
+from scipy.stats import skew
+import matplotlib.lines as mlines
+
+## Import data and merge
+master_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\(2) Filtered Master Dataset.csv', low_memory=False)
+location_index_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Location Index.csv', low_memory=False)
+df = master_df.merge(location_index_df, how='left', on='City')
+excluded_cities = ['Maple Ridge', 'New Westminster', 'Peterborough', 'Halifax']
+df = df[~df['City'].isin(excluded_cities)]
+
+# Define cities and prepare lists for all midpoints and proportions
+cities = df['City'].unique()
+ecozone = df['Ecozone'].unique()
+city_size = df['City Size'].unique()
+
+## Clean and sort the DBH
+# Ensure DBH is numeric and drop NaN values
+df['DBH'] = pd.to_numeric(df['DBH'], errors='coerce')
+df = df.dropna(subset=['DBH'])
+
+## Save csv to compare between ecozones and city sizes in SPSS
+SPSS_DBH_df = df.copy()
+SPSS_DBH_df = SPSS_DBH_df.drop(['Botanical Name', 'DAUID', 'CTUID', 'Basal Area', 'Downtown Core'], axis=1)
+SPSS_DBH_df.to_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\(SPSS) Ecozone and City Size Comparison - DBH.csv', index=False)
+
+## Compare the Distributions to Type I, II, and III points for comparison
+# Binning Information
+bins = [0, 20, 40, 60, float('inf')]
+bin_midpoints = [10, 30, 50, 70]
+labels = ['0-20', '20-40', '40-60', '60+']
+
+# Bin the real data
+df['DBH_bin'] = pd.cut(df['DBH'], bins=bins, labels=labels, right=False) # Add a new column 'DBH_bin' that categorizes 'DBH' into the bins
+grouped = df.groupby(['City', 'DBH_bin']).size().unstack(fill_value=0) # Group by 'City' and 'DBH_bin' and count the occurrences
+proportions = grouped.div(grouped.sum(axis=1), axis=0) # Calculate the proportion of trees in each bin for every city
+print(proportions) # Print the proportions table
+
+# Define RMSE Function
+def calculate_rmse(actual_proportions, expected_proportions):
+    return np.sqrt(np.mean((actual_proportions - expected_proportions) ** 2))
+
+# Compare to Type 1 Distributions
+def exponential_decay(x, a, b):
+    return a * np.exp(-b * x)
+a = 1.0  # Initial value
+b = 0.05  # Decay rate
+exp_decay_line = [exponential_decay(x, a, b) for x in bin_midpoints]
+Type_1_RMSE_dict = {}
+
+for city in proportions.index:
+    actual_proportions = proportions.loc[city].values
+    rmse = calculate_rmse(actual_proportions, exp_decay_line)
+    Type_1_RMSE_dict[city] = rmse
+
+# Compare to Type 2 Distribution
+def gaussian(x, mean, std_dev):
+    return (1/(std_dev * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mean) / std_dev) ** 2)
+mean = 30  # Mean at 30
+std_dev = 20  # Standard deviation, adjust to control spread
+Type_2_gaussian_line = [gaussian(x, mean, std_dev) for x in bin_midpoints]
+Type_2_gaussian_line = Type_2_gaussian_line / np.sum(Type_2_gaussian_line) # Normalize the Gaussian to ensure it's comparable as proportions (sum of probabilities = 1)
+Type_2_RMSE_dict = {}
+
+for city in proportions.index:
+    actual_proportions = proportions.loc[city].values
+    rmse = calculate_rmse(actual_proportions, Type_2_gaussian_line)
+    Type_2_RMSE_dict[city] = rmse
+
+# Compare to Type 3 Distributions
+Type_3 = [0.25, 0.25, 0.25, 0.25]
+Type_3_RMSE_dict = {}
+
+for city in proportions.index:
+    actual_proportions = proportions.loc[city].values
+    rmse = calculate_rmse(actual_proportions, Type_3)
+    Type_3_RMSE_dict[city] = rmse
+
+# Combine all RMSE results into a single DataFrame
+rmse_combined_df = pd.DataFrame({
+    'City': Type_1_RMSE_dict.keys(),
+    'RMSE Type 1': Type_1_RMSE_dict.values(),
+    'RMSE Type 2': Type_2_RMSE_dict.values(),
+    'RMSE Type 3': Type_3_RMSE_dict.values()
+})
+
+# Add a column that shows which RMSE is the best (Type 1, Type 2, or Type 3)
+rmse_combined_df['Best_Fit'] = rmse_combined_df.apply(
+    lambda row: 'Type 1' if row['RMSE Type 1'] < min(row['RMSE Type 2'], row['RMSE Type 3'])
+    else 'Type 2' if row['RMSE Type 2'] < min(row['RMSE Type 1'], row['RMSE Type 3'])
+    else 'Type 3', axis=1
+)
+
+# Print the combined RMSE table
+print(rmse_combined_df)
+
+# Plotting the distributions
+plt.figure(figsize=(8, 6))
+plt.plot(bin_midpoints, exp_decay_line, label="Type 1", marker='o')
+plt.plot(bin_midpoints, Type_2_gaussian_line, label="Type 2", marker='o')
+plt.plot(bin_midpoints, Type_3, label="Type 3", marker='o')
+plt.title("Comparison of Distributions (Type 1, Type 2, Type 3)")
+plt.xlabel("DBH Bin Midpoints")
+plt.ylabel("Proportion")
+plt.show()
