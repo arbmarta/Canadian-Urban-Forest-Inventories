@@ -5,7 +5,7 @@ import pandas as pd
 
 cities = ["Kelowna", "Maple Ridge", "New Westminster", "Vancouver", "Victoria", "Calgary", "Edmonton", "Lethbridge",
           "Strathcona County", "Regina", "Winnipeg", "Ajax", "Burlington", "Guelph", "Kingston", "Kitchener",
-          "Mississauga", "Niagara Falls", "Ottawa", "Peterborough", "St. Catherines", "Toronto", "Waterloo", "Welland",
+          "Mississauga", "Niagara Falls", "Ottawa", "Peterborough", "St. Catharines", "Toronto", "Waterloo", "Welland",
           "Whitby", "Windsor", "Longueuil", "Montreal", "Quebec City", "Fredericton", "Moncton", "Halifax"]
 
 # Initialize an empty list to hold the data
