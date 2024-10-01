@@ -1,0 +1,33 @@
+# This code is based on the work of Morgenroth et al. (2020) (DOI: 10.3390/f11020135)
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.interpolate import make_interp_spline
+from scipy.optimize import curve_fit
+import seaborn as sns
+from scipy.stats import gaussian_kde
+from scipy.stats import skew
+import matplotlib.lines as mlines
+
+## Import data and merge
+master_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\(2) Filtered Master Dataset.csv', low_memory=False)
+location_index_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Location Index.csv', low_memory=False)
+df = master_df.merge(location_index_df, how='left', on='City')
+excluded_cities = ['Maple Ridge', 'New Westminster', 'Peterborough', 'Halifax']
+df = df[~df['City'].isin(excluded_cities)]
+
+# Define cities and prepare lists for all midpoints and proportions
+cities = df['City'].unique()
+ecozone = df['Ecozone'].unique()
+city_size = df['City Size'].unique()
+
+## Clean and sort the DBH
+# Ensure DBH is numeric and drop NaN values
+df['DBH'] = pd.to_numeric(df['DBH'], errors='coerce')
+df = df.dropna(subset=['DBH'])
+
+## Save csv to compare between ecozones and city sizes in SPSS
+SPSS_DBH_df = df.copy()
+SPSS_DBH_df = SPSS_DBH_df.drop(['Botanical Name', 'DAUID', 'CTUID', 'Basal Area', 'Downtown Core'], axis=1)
+SPSS_DBH_df.to_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\(SPSS) Ecozone and City Size Comparison - DBH.csv', index=False)
