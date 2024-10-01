@@ -27,10 +27,65 @@ city_size = df['City Size'].unique()
 df['DBH'] = pd.to_numeric(df['DBH'], errors='coerce')
 df = df.dropna(subset=['DBH'])
 
-## Save csv to compare between ecozones and city sizes in SPSS
-SPSS_DBH_df = df.copy()
-SPSS_DBH_df = SPSS_DBH_df.drop(['Botanical Name', 'DAUID', 'CTUID', 'Basal Area', 'Downtown Core'], axis=1)
-SPSS_DBH_df.to_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\(SPSS) Ecozone and City Size Comparison - DBH.csv', index=False)
+## Create Bins
+bins = [0, 10, 20, 30, 40, 50, 60, 70, np.inf]
+bin_midpoints = [5, 15, 25, 35, 45, 55, 65, 75]
+
+## Find the median DBH for each city
+median_dbh_per_city = df.groupby('City')['DBH'].median().reset_index()
+print(median_dbh_per_city)
+city_skewness = df.groupby('City')['DBH'].apply(lambda x: skew(x, nan_policy='omit')).reset_index()
+print(city_skewness)
+
+## Structural Diversity Index
+# Calculate Shannon-Wiener index for each city
+def calculate_shannon_wiener_city(city_data, bins):
+    # Classify trees into DBH classes using binning
+    dbh_classes = pd.cut(city_data['DBH'], bins=bins, labels=range(1, len(bins)))
+
+    # Calculate the proportion of trees in each class
+    class_counts = dbh_classes.value_counts(normalize=True).sort_index()
+
+    # Check for empty upper bins and adjust the number of classes
+    last_non_empty_class = class_counts[class_counts > 0].index[-1]
+    valid_bins = bins[:last_non_empty_class + 1]  # Include up to the last non-empty class
+
+    # Reclassify using valid bins
+    dbh_classes = pd.cut(city_data['DBH'], bins=valid_bins, labels=range(1, len(valid_bins)))
+    class_counts = dbh_classes.value_counts(normalize=True).sort_index()
+
+    # Filter out zero proportions to avoid log(0)
+    class_proportions = class_counts[class_counts > 0]
+
+    # Calculate the Shannon-Wiener index (H)
+    H = -np.sum(class_proportions * np.log(class_proportions))
+
+    # Calculate H_max (maximum possible diversity)
+    H_max = np.log(len(valid_bins) - 1)  # Use the number of non-empty bins
+
+    return H, H_max
+
+city_results = []
+
+cities = df['City'].unique()
+for city in cities:
+    city_data = df[df['City'] == city]
+
+    if len(city_data) == 0:
+        continue  # Skip if there are no valid DBH values for the city
+
+    H, H_max = calculate_shannon_wiener_city(city_data, bins)
+
+    # Store the result for the city
+    city_results.append({
+        'City': city,
+        'Shannon-Wiener Index (H)': H,
+        'Maximum Diversity (H_max)': H_max
+    })
+
+# Convert results to a DataFrame for easy viewing
+Structural_Diversity_Index_city_df = pd.DataFrame(city_results)
+print(Structural_Diversity_Index_city_df)
 
 ## Compare the Distributions to Type I, II, and III points for comparison
 # Binning Information
