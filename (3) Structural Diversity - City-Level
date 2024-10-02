@@ -8,8 +8,8 @@ import matplotlib.lines as mlines
 
 ## Set up the model
 # Import data and merge
-master_df = pd.read_csv(r'Filtered Master Dataset.csv', low_memory=False)
-location_index_df = pd.read_csv(r'Location Index.csv', low_memory=False)
+master_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\(2) Filtered Master Dataset.csv', low_memory=False)
+location_index_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Location Index.csv', low_memory=False)
 df = master_df.merge(location_index_df, how='left', on='City')
 excluded_cities = ['Maple Ridge', 'New Westminster', 'Peterborough', 'Halifax']
 df = df[~df['City'].isin(excluded_cities)]
