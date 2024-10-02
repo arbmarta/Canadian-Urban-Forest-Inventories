@@ -92,11 +92,7 @@ proportions = grouped.div(grouped.sum(axis=1), axis=0)  # Calculate the proporti
 print("\nProportions of Trees in Each Bin per City:")
 print(proportions)
 
-# Define RMSE Function
-def calculate_rmse(actual_proportions, expected_proportions):
-    return np.sqrt(np.mean((actual_proportions - expected_proportions) ** 2))
-
-
+# Define Jensen-Shannon Divergence Function
 def calculate_js_divergence(P, Q):
     # Ensure the distributions are numpy arrays
     P = np.array(P)
@@ -110,8 +106,6 @@ def calculate_js_divergence(P, Q):
     M = 0.5 * (P + Q)
     js_divergence = 0.5 * np.sum(P * np.log(P / M)) + 0.5 * np.sum(Q * np.log(Q / M))
     return js_divergence
-
-
 
 # Define Type 1 (Exponential Decay) and Type 2 (Gaussian) functions
 def exponential_decay(x, a, b):
@@ -164,67 +158,67 @@ def optimize_type_2(city_proportions):
 
     return best_js_divergence, best_std_dev
 
-# Dictionary to store the optimized RMSE values and parameters
+# Dictionary to store the optimized JSD values and parameters
 optimized_results = {
     'City': [],
-    'RMSE Type 1': [],
+    'JS Divergence Type 1': [],
     'Type 1 Best a': [],
     'Type 1 Best b': [],
-    'RMSE Type 2': [],
+    'JS Divergence Type 2': [],
     'Type 2 Best std_dev': [],
-    'RMSE Type 3': [],
+    'JS Divergence Type 3': [],
     'Best_Fit': []
 }
 
-# Iterate over cities and calculate optimized RMSE for Type 1 and Type 2
+# Iterate over cities and calculate optimized JSD for Type 1 and Type 2
 for city in proportions.index:
     city_data = proportions.loc[city]
 
     # Optimize for Type 1 (Exponential Decay)
-    type_1_rmse, best_a, best_b = optimize_type_1(city_data)
+    type_1_js_divergence, best_a, best_b = optimize_type_1(city_data)
 
     # Optimize for Type 2 (Gaussian)
-    type_2_rmse, best_std_dev = optimize_type_2(city_data)
+    type_2_js_divergence, best_std_dev = optimize_type_2(city_data)
 
-    # Calculate RMSE for Type 3 (Equal Distribution)
-    type_3_rmse = calculate_rmse(city_data.values, Type_3)
+    # Calculate JS Divergence for Type 3 (Equal Distribution)
+    type_3_js_divergence = calculate_js_divergence(city_data.values, Type_3)
 
     # Determine the best fit type
-    rmses = {'Type 1': type_1_rmse, 'Type 2': type_2_rmse, 'Type 3': type_3_rmse}
-    best_fit = min(rmses, key=rmses.get)
+    js_divergences = {'Type 1': type_1_js_divergence, 'Type 2': type_2_js_divergence, 'Type 3': type_3_js_divergence}
+    best_fit = min(js_divergences, key=js_divergences.get)
 
     # Append the results for the city
     optimized_results['City'].append(city)
-    optimized_results['RMSE Type 1'].append(type_1_rmse)
+    optimized_results['JS Divergence Type 1'].append(type_1_js_divergence)
     optimized_results['Type 1 Best a'].append(best_a)
     optimized_results['Type 1 Best b'].append(best_b)
-    optimized_results['RMSE Type 2'].append(type_2_rmse)
+    optimized_results['JS Divergence Type 2'].append(type_2_js_divergence)
     optimized_results['Type 2 Best std_dev'].append(best_std_dev)
-    optimized_results['RMSE Type 3'].append(type_3_rmse)
+    optimized_results['JS Divergence Type 3'].append(type_3_js_divergence)
     optimized_results['Best_Fit'].append(best_fit)
 
 # Convert to DataFrame for better display
-optimized_rmse_df = pd.DataFrame(optimized_results)
-optimized_rmse_df.to_csv(r'optimized_rmse_df.csv', index=False)
+optimized_js_divergence_df = pd.DataFrame(optimized_results)
+optimized_js_divergence_df.to_csv(r'optimized_js_divergence_df.csv', index=False)
 
 # Display the DataFrame
 pd.set_option('display.max_columns', None)
-print("\nOptimized RMSE and Best Fit Parameters per City:")
-print(optimized_rmse_df)
+print("\nOptimized JS Divergence and Best Fit Parameters per City:")
+print(optimized_js_divergence_df)
 
 # Iterate over each city and plot the actual proportions against the best-fit distribution
 for city in proportions.index:
     city_data = proportions.loc[city].values
-    best_fit_type = optimized_rmse_df[optimized_rmse_df['City'] == city]['Best_Fit'].values[0]
+    best_fit_type = optimized_js_divergence_df[optimized_js_divergence_df['City'] == city]['Best_Fit'].values[0]
 
     # Prepare the best fit line based on the optimization results
     if best_fit_type == 'Type 1':
-        best_a = optimized_rmse_df[optimized_rmse_df['City'] == city]['Type 1 Best a'].values[0]
-        best_b = optimized_rmse_df[optimized_rmse_df['City'] == city]['Type 1 Best b'].values[0]
+        best_a = optimized_js_divergence_df[optimized_js_divergence_df['City'] == city]['Type 1 Best a'].values[0]
+        best_b = optimized_js_divergence_df[optimized_js_divergence_df['City'] == city]['Type 1 Best b'].values[0]
         best_fit_proportions = exponential_decay(np.array(bin_midpoints), best_a, best_b)
         best_fit_proportions = best_fit_proportions / np.sum(best_fit_proportions)
     elif best_fit_type == 'Type 2':
-        best_std_dev = optimized_rmse_df[optimized_rmse_df['City'] == city]['Type 2 Best std_dev'].values[0]
+        best_std_dev = optimized_js_divergence_df[optimized_js_divergence_df['City'] == city]['Type 2 Best std_dev'].values[0]
         best_fit_proportions = gaussian(np.array(bin_midpoints), best_std_dev)
         best_fit_proportions = best_fit_proportions / np.sum(best_fit_proportions)  # Normalize Gaussian
     else:
@@ -248,13 +242,13 @@ for city in proportions.index:
 
 # Plotting the distributions
 # Type 1 - average of best_a and best_b from all cities
-average_a = optimized_rmse_df['Type 1 Best a'].mean()
-average_b = optimized_rmse_df['Type 1 Best b'].mean()
+average_a = optimized_js_divergence_df['Type 1 Best a'].mean()
+average_b = optimized_js_divergence_df['Type 1 Best b'].mean()
 exp_decay_line = exponential_decay(np.array(bin_midpoints), average_a, average_b)
 exp_decay_line = exp_decay_line / np.sum(exp_decay_line)
 
 # Type 2 - use average std_dev
-average_std_dev = optimized_rmse_df['Type 2 Best std_dev'].mean()
+average_std_dev = optimized_js_divergence_df['Type 2 Best std_dev'].mean()
 Type_2_gaussian_line = gaussian(np.array(bin_midpoints), average_std_dev)
 Type_2_gaussian_line = Type_2_gaussian_line / np.sum(Type_2_gaussian_line)
 
