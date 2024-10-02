@@ -205,6 +205,7 @@ for city in proportions.index:
 
 # Convert to DataFrame for better display
 optimized_rmse_df = pd.DataFrame(optimized_results)
+optimized_rmse_df.to_csv(r'optimized_rmse_df.csv', index=False)
 
 # Display the DataFrame
 pd.set_option('display.max_columns', None)
@@ -246,14 +247,13 @@ for city in proportions.index:
     plt.show()
 
 # Plotting the distributions
-# For plotting, we need to define Type 1 and Type 2 lines
-# For Type 1, let's use average of best_a and best_b from all cities
+# Type 1 - average of best_a and best_b from all cities
 average_a = optimized_rmse_df['Type 1 Best a'].mean()
 average_b = optimized_rmse_df['Type 1 Best b'].mean()
 exp_decay_line = exponential_decay(np.array(bin_midpoints), average_a, average_b)
 exp_decay_line = exp_decay_line / np.sum(exp_decay_line)
 
-# For Type 2, use average std_dev
+# Type 2 - use average std_dev
 average_std_dev = optimized_rmse_df['Type 2 Best std_dev'].mean()
 Type_2_gaussian_line = gaussian(np.array(bin_midpoints), average_std_dev)
 Type_2_gaussian_line = Type_2_gaussian_line / np.sum(Type_2_gaussian_line)
