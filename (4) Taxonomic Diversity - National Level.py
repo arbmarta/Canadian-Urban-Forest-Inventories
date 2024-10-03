@@ -1,8 +1,6 @@
 # This code is based on the work of Ma et al. (2020) (DOI: 10.1016/j.ufug.2020.126826)
 
 import pandas as pd
-import numpy as np
-from scipy.stats import mannwhitneyu
 
 ## Import data
 master_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\(2) Filtered Master Dataset.csv', low_memory=False)
@@ -10,6 +8,7 @@ introduced_trees_index = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadia
 family_index = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Families Index.csv', low_memory=False)
 location_index = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Location Index.csv', low_memory=False)
 downtown_index = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Downtown Areas.csv', low_memory=False)
+find_and_replace = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Find and Replace 2.csv', low_memory=False)
 
 ## Drop any rows where botanical name is blank or species ID is "missing"
 master_df['Botanical Name'] = master_df['Botanical Name'].str.strip()
@@ -20,10 +19,47 @@ rows_after = master_df.shape[0]
 print(f"Number of rows before: {rows_before}")
 print(f"Number of rows after: {rows_after}")
 
-## Merge data
+## Merge and clean data
 df = master_df.merge(location_index, how='left', on='City')
-df['Genus'] = df['Botanical Name'].str.split().str[0]
 df['Species'] = df['Botanical Name'].str.split().str[:2].str.join(' ')
+df['Genus'] = df['Species'].str.split().str[0]
+df = df.merge(family_index, how='left', on='Genus')
+
+unique_species = df['Species'].unique()
+
+replace_dict = dict(zip(find_and_replace['Species'], find_and_replace['Fix']))
+df['Species'] = df['Species'].replace(replace_dict)
+df['Species'] = df['Species'].str.lower()
+
+# Deal with blank (missing) species ID, then make all species names lowercase and trim spaces
+df['Species'] = df['Species'].replace('', pd.NA).fillna('missing')
+df['Species'] = df['Species'].str.lower().str.strip()
+df['Species'] = df['Species'].replace('', pd.NA).fillna('missing')
+
+# Standardize cultivars and species
+df['Species'] = df['Species'].str.replace(" x ", " ", regex=False)
+df['Species'] = df['Species'].str.replace("'", "", regex=False)
+
+# Remove any non-living trees
+df = df[df["Botanical Name"].isin(["missing", "private", "not known", "vacant"])]
+df = df[df['Botanical Name'].str.contains("vacant", na=False)]
+
+# Print the result
+print("Unique values in the 'Species' column:")
+for species in unique_species:
+    print(species)
+
+# Function to extract the genus
+def get_genus(species):
+    words = species.split()
+    if words[0] == 'x' and len(words) > 1:
+        return words[1]  # Take the second word if the first is 'x'
+    return words[0]  # Otherwise, take the first word
+
+# Apply the function to create the Genus column
+df['Genus'] = df['Species'].apply(get_genus)
+
+# Get Family
 df = df.merge(family_index, how='left', on='Genus')
 
 ## NATIONAL OVERVIEW
