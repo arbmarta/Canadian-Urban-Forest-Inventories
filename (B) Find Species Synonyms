@@ -1,0 +1,53 @@
+# Checks whether species conform to KEW names (kew.org)
+
+import pandas as pd
+
+possible_synonyms = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Possible Synonyms.csv', low_memory=False)
+synonym_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Species Synonyms.csv', delimiter="|", low_memory=False)
+
+synonym_df['taxon_name'] = synonym_df['taxon_name'].str.lower()
+possible_synonyms['Taxonomic Name'] = possible_synonyms['Taxonomic Name'].str.lower()
+
+synonym_df = synonym_df[['taxon_name', 'accepted_plant_name_id', 'taxon_status', 'plant_name_id']]
+perfect_matches = synonym_df['taxon_name'].isin(possible_synonyms['Taxonomic Name'])
+match_count = perfect_matches.sum()
+
+print(match_count)
+
+matched_synonyms = possible_synonyms.merge(synonym_df, left_on='Taxonomic Name', right_on='taxon_name', how='left')
+matched_synonyms = matched_synonyms.drop_duplicates(subset=['Taxonomic Name', 'accepted_plant_name_id'])
+matched_synonyms['Matching'] = (matched_synonyms['Taxonomic Name'] == matched_synonyms['taxon_name']).astype(int)
+
+print(matched_synonyms)
+
+# Identify synonyms
+df = synonym_df
+
+# List of plant_name_id values to keep
+plant_name_ids = [
+    2917735, 380589, 469679, 2616532, 2615900, 456789, 469680, 2943915, 2724586, 385841,
+    2942010, 3243120, 356527, 2940121, 2838104, 2814099, 382742, 174608, 457906, 174637,
+    35216, 174608, 488117, 2707173, 3265869, 2921984, 2946109, 3258625, 3265749, 2950597,
+    371728, 380716, 320398, 173929, 2616409, 386625, 488094, 3015014, 2945635, 2950363,
+    2616397, 3261544, 2951074, 3240152, 2951074, 3014995, 3014961, 252949, 2594354, 3237455,
+    457913, 174075, 2838104, 2945308, 2945552, 3262517, 369985, 457902, 2708196, 3259864,
+    2917429, 2486118, 172538, 6672, 466796, 2920883, 2945739, 2917429, 381078, 2894300,
+    2814031, 371864, 371863, 488094, 456789, 93100, 2624507, 2894300, 345308, 2947364,
+    173674, 2803467, 3264381, 2855579
+]
+
+# Assuming df is your DataFrame, filter the rows where plant_name_id is in the list
+df = df[df['plant_name_id'].isin(plant_name_ids)]
+missing_rows = 84 - df.shape[0]
+print(missing_rows)
+
+# Identify which plant_name_ids are not found in filtered_df
+missing_plant_name_ids = [plant_id for plant_id in plant_name_ids if plant_id not in df['plant_name_id'].values]
+print(missing_plant_name_ids)
+
+print(df)
+
+df.to_csv('synonyms in inventories.csv', index=False)
+
+synonyms = df.merge(matched_synonyms, left_on='plant_name_id', right_on='accepted_plant_name_id', how='left')
+synonyms.to_csv('(B) Species Synonyms.csv', index=False)
