@@ -79,13 +79,18 @@ cities = df['City'].unique()
 df_included = df[df['City'].isin(included_cities)]
 
 # Function to calculate Shannon Diversity Index
-def shannon_diversity(group):
-    species_counts = group['Species'].value_counts()
-    proportions = species_counts / species_counts.sum()
+def shannon_diversity(group, column):
+    counts = group[column].value_counts()
+    proportions = counts / counts.sum()
     return -np.sum(proportions * np.log(proportions))
 
-# Group by 'City' and 'DAUID', then apply the Shannon index function
-shannon_indices = df_included.groupby(['City', 'DAUID']).apply(shannon_diversity).reset_index(name='Shannon_Index')
+# Group by 'City' and 'DAUID', then apply the Shannon index function for Species, Genus, and Family
+shannon_species = df_included.groupby(['City', 'DAUID']).apply(lambda g: shannon_diversity(g, 'Species')).reset_index(name='Shannon_Species_Index')
+shannon_genus = df_included.groupby(['City', 'DAUID']).apply(lambda g: shannon_diversity(g, 'Genus')).reset_index(name='Shannon_Genus_Index')
+shannon_family = df_included.groupby(['City', 'DAUID']).apply(lambda g: shannon_diversity(g, 'Family')).reset_index(name='Shannon_Family_Index')
+
+# Merge the results into one dataframe
+shannon_indices = shannon_species.merge(shannon_genus, on=['City', 'DAUID']).merge(shannon_family, on=['City', 'DAUID'])
 
 shannon_indices = shannon_indices.merge(downtown_df, how='left', on='DAUID')
 shannon_indices['Location'] = shannon_indices['DOWNTOWN'].apply(lambda x: 'Downtown' if pd.notna(x) else 'Periphery')
