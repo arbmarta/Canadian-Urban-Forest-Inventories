@@ -1,0 +1,96 @@
+# This code is based on the work of Ma et al. (2020) (DOI: 10.1016/j.ufug.2020.126826)
+
+import pandas as pd
+import numpy as np
+
+## Import data
+master_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\(2) Filtered Master Dataset.csv', low_memory=False)
+introduced_trees_index = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Tree Nativity and Families\Pivoted Family and Distribution Data.csv', low_memory=False)
+family_index = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Families Index.csv', low_memory=False)
+location_index = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Location Index.csv', low_memory=False)
+downtown_index = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Downtown Areas.csv', low_memory=False)
+find_and_replace = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Find and Replace 2.csv', low_memory=False)
+downtown_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Downtown Areas.csv', low_memory=False)
+
+included_cities = ['Moncton', 'Fredericton', 'Quebec City', 'Longueuil', 'Montreal', 'Ottawa', 'Kingston',
+ 'Toronto', 'St. Catherines', 'Kitchener', 'Guelph', 'Windsor', 'Winnipeg', 'Regina', 'Lethbridge', 'Calgary',
+ 'Edmonton', 'Kelowna', 'Vancouver', 'Victoria', 'Mississauga', 'Burlington', 'Waterloo']
+
+## Drop any rows where botanical name is blank or species ID is "missing"
+master_df['Botanical Name'] = master_df['Botanical Name'].str.strip()
+rows_before = master_df.shape[0]
+master_df = master_df[(master_df['Botanical Name'] != 'missing')]
+master_df = master_df[(master_df['Botanical Name'].notna()) & (master_df['Botanical Name'] != '')]
+rows_after = master_df.shape[0]
+print(f"Number of rows before: {rows_before}")
+print(f"Number of rows after: {rows_after}")
+
+## Merge and clean data
+df = master_df.merge(location_index, how='left', on='City')
+df['Species'] = df['Botanical Name'].str.split().str[:2].str.join(' ')
+replace_dict = dict(zip(find_and_replace['Species'], find_and_replace['Fix']))
+df['Species'] = df['Species'].replace(replace_dict)
+df['Species'] = df['Species'].str.lower()
+df['Species'] = df['Species'].replace(replace_dict) # Run a second time - do NOT remove this function
+df['Species'] = df['Species'].str.lower()
+
+# Deal with blank (missing) species ID, then make all species names lowercase and trim spaces
+df['Species'] = df['Species'].replace('', pd.NA).fillna('missing')
+df['Species'] = df['Species'].str.lower().str.strip()
+df['Species'] = df['Species'].replace('', pd.NA).fillna('missing')
+
+# Standardize cultivars and species
+df['Species'] = df['Species'].str.replace(" x ", " ", regex=False)
+df['Species'] = df['Species'].str.replace("'", "", regex=False)
+
+# Remove any non-living trees
+df = df[~df['Species'].isin(["missing", "private", "not known", "vacant"])]
+
+# Function to split, check, and replace 'x' with 'spp.'
+def process_species(species):
+    words = species.split()[:2]  # Split and keep the first two words
+    if len(words) > 1 and words[1] == 'x':  # If the second word is 'x'
+        words[1] = 'spp.'  # Replace 'x' with 'spp.'
+    return ' '.join(words)  # Join the words back together
+
+# Apply the function to the 'Species' column
+df['Species'] = df['Species'].apply(process_species)
+
+# Print the result
+unique_species = df['Species'].unique()
+
+# Function to extract the genus
+def get_genus(species):
+    words = species.split()
+    if words[0] == 'x' and len(words) > 1:
+        return words[1]  # Take the second word if the first is 'x'
+    return words[0]  # Otherwise, take the first word
+
+# Apply the function to create the Genus column
+df['Genus'] = df['Species'].apply(get_genus)
+
+# Get Family
+df = df.merge(family_index, how='left', on='Genus')
+
+## DOWNTOWN COMPARISON
+cities = df['City'].unique()
+
+# Filter for the cities in 'included_cities'
+df_included = df[df['City'].isin(included_cities)]
+
+# Function to calculate Shannon Diversity Index
+def shannon_diversity(group):
+    species_counts = group['Species'].value_counts()
+    proportions = species_counts / species_counts.sum()
+    return -np.sum(proportions * np.log(proportions))
+
+# Group by 'City' and 'DAUID', then apply the Shannon index function
+shannon_indices = df_included.groupby(['City', 'DAUID']).apply(shannon_diversity).reset_index(name='Shannon_Index')
+
+shannon_indices = shannon_indices.merge(downtown_df, how='left', on='DAUID')
+shannon_indices['Location'] = shannon_indices['DOWNTOWN'].apply(lambda x: 'Downtown' if pd.notna(x) else 'Periphery')
+
+# Display the result
+print(shannon_indices)
+
+shannon_indices.to_csv('(4) Taxonomic Diversity - Downtown Comparison.csv', index=False)
