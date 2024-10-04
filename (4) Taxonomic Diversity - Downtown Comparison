@@ -10,11 +10,10 @@ family_index = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Fo
 location_index = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Location Index.csv', low_memory=False)
 downtown_index = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Downtown Areas.csv', low_memory=False)
 find_and_replace = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Find and Replace 2.csv', low_memory=False)
-downtown_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Downtown Areas.csv', low_memory=False)
 
 included_cities = ['Moncton', 'Fredericton', 'Quebec City', 'Longueuil', 'Montreal', 'Ottawa', 'Kingston',
- 'Toronto', 'St. Catherines', 'Kitchener', 'Guelph', 'Windsor', 'Winnipeg', 'Regina', 'Lethbridge', 'Calgary',
- 'Edmonton', 'Kelowna', 'Vancouver', 'Victoria', 'Mississauga', 'Burlington', 'Waterloo']
+ 'Toronto', 'St. Catherines', 'Kelowna', 'Kitchener', 'Guelph', 'Windsor', 'Winnipeg', 'Regina', 'Lethbridge', 'Calgary',
+ 'Edmonton', 'Vancouver', 'Victoria', 'Mississauga', 'Burlington', 'Waterloo']
 
 ## Drop any rows where botanical name is blank or species ID is "missing"
 master_df['Botanical Name'] = master_df['Botanical Name'].str.strip()
@@ -92,10 +91,80 @@ shannon_family = df_included.groupby(['City', 'DAUID']).apply(lambda g: shannon_
 # Merge the results into one dataframe
 shannon_indices = shannon_species.merge(shannon_genus, on=['City', 'DAUID']).merge(shannon_family, on=['City', 'DAUID'])
 
-shannon_indices = shannon_indices.merge(downtown_df, how='left', on='DAUID')
+shannon_indices = shannon_indices.merge(downtown_index, how='left', on='DAUID')
 shannon_indices['Location'] = shannon_indices['DOWNTOWN'].apply(lambda x: 'Downtown' if pd.notna(x) else 'Periphery')
 
 # Display the result
 print(shannon_indices)
 
 shannon_indices.to_csv('(4) Taxonomic Diversity - Downtown Comparison.csv', index=False)
+
+## Identify native tree proportion in the df
+df_1 = df[df['City'].isin(included_cities)]
+merged_df = df_1.merge(downtown_index, on='DAUID', how='left')
+merged_df['Location'] = merged_df['DOWNTOWN'].apply(lambda x: 'Downtown' if pd.notna(x) else 'Periphery')
+merged_df['Identifier'] = merged_df['City'] + " " + merged_df['Location']
+print(merged_df.columns)
+
+for identifier in merged_df['Identifier'].unique():
+    print(f"Processing Identifier: {identifier}")
+
+    # Subset the dataframe for the current Identifier
+    subset_df = merged_df[merged_df['Identifier'] == identifier].copy()
+
+    ## Report the number of unique species, genera, and families
+    unique_counts = subset_df[['Family', 'Genus', 'Species']].nunique()
+    print(unique_counts)
+
+    ## Report the proportion of the 3 most common species, genera, and families
+    top_species = (subset_df['Species'].value_counts(normalize=True) * 100).round(2).head(3)
+    top_genus = (subset_df['Genus'].value_counts(normalize=True) * 100).round(2).head(3)
+    top_family = (subset_df['Family'].value_counts(normalize=True) * 100).round(2).head(3)
+
+    print("Top 3 Species (with proportions):\n", top_species)
+    print("\nTop 3 Genus (with proportions):\n", top_genus)
+    print("\nTop 3 Family (with proportions):\n", top_family)
+
+    # Get the top taxa names from value_counts
+    top_species_names = top_species.index.tolist()
+    top_genus_names = top_genus.index.tolist()
+    top_family_names = top_family.index.tolist()
+
+    ## Report the number of native trees
+    introduced_trees_index['Species'] = introduced_trees_index['Botanical Name'].str.split().str[:2].str.join(' ')
+    province_columns = ['British Columbia', 'Alberta', 'Saskatchewan', 'Manitoba', 'Ontario', 'Quebec', 'Newfoundland', 'Labrador', 'Nova Scotia', 'New Brunswick', 'Prince Edward Island']
+    introduced_trees_collapsed = introduced_trees_index.groupby('Species')[province_columns].min().reset_index()
+
+    # Function to concatenate province names where value is 0
+    def concatenate_provinces(row):
+        provinces = []
+
+        for province in province_columns:
+            if row[province] == 0:
+                provinces.append(province)
+
+        if not provinces:
+                return "None"
+
+        return ' '.join(provinces) # Join the provinces with a space
+
+    introduced_trees_collapsed['Province Nativity'] = introduced_trees_collapsed.apply(concatenate_provinces, axis=1) # Apply the function to create the new column 'Province Nativity'
+    introduced_trees_collapsed = introduced_trees_collapsed[['Species', 'Province Nativity']]  # Remove all columns except Species and Province Nativity
+    native_tree_df = subset_df.merge(introduced_trees_collapsed, how='left', on='Species')
+
+    def check_nativity(row):
+        if pd.isna(row['Province Nativity']):  # Check if 'Province Nativity' is NaN
+            return 'I'
+        province_nativity = str(row['Province Nativity'])  # Convert 'Province Nativity' to a string
+        return 'N' if row['Province'] in province_nativity else 'I'  # Check if 'Province' is in the 'Province Nativity'
+
+    native_tree_df['Nativity'] = native_tree_df.apply(check_nativity, axis=1)
+
+    # Number of native trees across Canada
+    n_count = native_tree_df['Nativity'].value_counts().get('N', 0)
+    i_count = native_tree_df['Nativity'].value_counts().get('I', 0)
+
+    proportion_n = round((n_count / (n_count + i_count) * 100), 2)
+
+    print(f"Count of 'N': {n_count}")
+    print(f"Proportion of 'N': {proportion_n}")
