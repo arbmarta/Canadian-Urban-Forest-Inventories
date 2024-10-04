@@ -1,45 +1,80 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.interpolate import make_interp_spline
-from scipy.integrate import simps, simpson
+from scipy.integrate import simpson
+from scipy.ndimage import gaussian_filter1d
+from scipy.stats import lognorm, beta
+
+
+def generate_youthful_curve(x, a=0.9585, b=-6.6757, c=0.0341):
+    return a * np.exp(b * (x / 80)) + c
+
+def generate_mature_curve(x, value=0.33):
+    return np.full_like(x, value)
+
+from scipy.stats import beta
+
+def skewed_gaussian(x, mean, std_dev, skew_factor):
+    # Generate a Gaussian curve and apply a skew factor to make it right-skewed
+    gauss = (1 / (std_dev * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mean) / std_dev) ** 2)
+    skew = (1 - skew_factor * (x - mean) / std_dev)
+    y = gauss * skew
+    return y
+
+def adjust_y_with_conditions(x, y, c=0.02, x_peak=30, decay_length=10):
+    # Apply c when x < x_peak
+    y[x < x_peak] += c
+
+    # For x >= x_peak, apply a diminishing addition of c over the decay_length
+    mask = (x >= x_peak) & (x <= x_peak + decay_length)
+    diminishing_factor = 1 - ((x[mask] - x_peak) / decay_length)
+    diminishing_factor = np.maximum(diminishing_factor, 0)  # Ensure no negative values
+
+    y[mask] += c * diminishing_factor
+
+    return y
+
+def generate_maturing_curve(x, c=0.02, y_max=1.0, x_peak=30):
+    # Generate skewed Gaussian curve for Type II maturing curve
+    mean = x_peak  # Peak at x = 30
+    std_dev = 10  # Standard deviation, adjust to control spread
+    skew_factor = 0.25  # Adjust to control the amount of right skew
+
+    y = skewed_gaussian(x, mean, std_dev, skew_factor)
+
+    # Apply adjustment conditions
+    y = adjust_y_with_conditions(x, y, c=c, x_peak=x_peak)
+
+    # Normalize the curve to ensure it's comparable as proportions (set y at x=0 to c and y at x=80 to 0)
+    y = y - np.min(y)  # Shift to start from 0
+    y = y / np.max(y)  # Normalize to max value of 1
+    y = y_max * y  # Scale to y_max
+
+    # Apply smoothing to the final curve using Gaussian filter
+    y_smoothed = gaussian_filter1d(y, sigma=2)  # Adjust sigma for more or less smoothing
+
+    return y_smoothed
+
+
 
 
 def plot_tree_population_curves():
     fig, ax = plt.subplots()
 
-    x = np.linspace(0, 80, 100)
+    x = np.linspace(0, 80, 300)
 
-    ## Type I (Youthful)
-    y_youthful = 0.9585 * np.exp(-6.6757 * (x / 80)) + 0.0341  # Adjusting for new x scale
-    youthful_area = simpson(y_youthful, x)
-
-    # Normalize the curve to make its area equal to 1
-    y_youthful_normalized = y_youthful / youthful_area
+    # Type I (Youthful)
+    y_youthful = generate_youthful_curve(x)
+    y_youthful_normalized = y_youthful / simpson(y=y_youthful, x=x)
     ax.plot(x, y_youthful_normalized, lw=2, label='Youthful (Type I)', color='blue')
 
-    ## Type II (Maturing)
-    x_sampled = np.array([0, 4.77, 10.44, 15.04, 18.26, 22.79, 30.61, 45.18, 59.09, 80])
-    y_sampled = np.array([
-        0.4286624181536111, 0.558174130721433, 0.6091295213343511, 0.7454352393328243,
-        0.6286624181536111, 0.4736730977500888, 0.32717625497796085, 0.21677287949305219,
-        0.15944804318582957, 0.059724079906753857
-    ]) # Alex changed by taking -.1 from any left of the semi-mature and +.1 right of the semi-mature #Sept18
+    # Type II (Maturing)
+    y_maturing = generate_maturing_curve(x)
+    y_maturing_normalized = y_maturing / simpson(y=y_maturing, x=x)
+    ax.plot(x, y_maturing_normalized, lw=2, label='Maturing (Type II)', color='green')
 
-    x_spline = np.linspace(min(x_sampled), max(x_sampled), 300)  # Generate more x values for a smooth curve
-    spline = make_interp_spline(x_sampled, y_sampled, k=3)  # Cubic spline (k=3)
-    y_spline = spline(x_spline)
-
-    # Normalize the area under Type II curve to match Type I
-    maturing_area = simpson(y_spline, x_spline)
-    y_spline_normalized = y_spline / maturing_area
-    ax.plot(x_spline, y_spline_normalized, lw=2, label='Maturing (Type II)', color='green')
-
-    ## Type III (Mature)
-    y_mature = np.full_like(x, 0.2)  # Original constant value
-    mature_area = simpson(y_mature, x)
-
-    # Normalize the area of Type III to match Type I
-    y_mature_normalized = y_mature / mature_area
+    # Type III (Mature)
+    y_mature = generate_mature_curve(x)
+    y_mature_normalized = y_mature / simpson(y=y_mature, x=x)
     ax.plot(x, y_mature_normalized, lw=2, label='Mature (Type III)', color='red')
 
     # Labels, ticks, and formatting
@@ -49,11 +84,7 @@ def plot_tree_population_curves():
     ax.set_xticks([0, 20, 40, 60, 80])
     ax.set_xticklabels(['0 cm', '20 cm', '40 cm', '60 cm', '80 cm'])
 
-    ax.set_yticks([0, 1])
-    ax.set_yticklabels(['', ''])
-
     ax.set_xlim(0, 80)
-    ax.set_ylim(0, 1)
 
     ax.axvline(x=20, color='black', linestyle='--', lw=1)
     ax.axvline(x=40, color='black', linestyle='--', lw=1)
@@ -66,6 +97,7 @@ def plot_tree_population_curves():
 
     ax.legend()
 
+    plt.tight_layout()
     plt.savefig("plot.png", dpi=1200)
     fig.savefig('plot.svg', format='svg', dpi=1200)
 
