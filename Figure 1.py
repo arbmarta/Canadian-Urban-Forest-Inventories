@@ -1,17 +1,27 @@
+import importlib
+import os
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.integrate import simpson
 from scipy.ndimage import gaussian_filter1d
-from scipy.stats import lognorm, beta
 
 
-def generate_youthful_curve(x, a=0.9585, b=-6.6757, c=0.0341):
-    return a * np.exp(b * (x / 80)) + c
+def generate_youthful_curve(x, c=-0.02, starting_amplitude=1, b=-3.55):
+    y = c + (starting_amplitude * np.exp(b * (x / 80)))
+    y = np.maximum(y, 0)  # Ensure non-negative values
 
-def generate_mature_curve(x, value=0.33):
+    # Ensure y = 1 when x = 0
+    y[0] = 1.0
+
+    y = y / np.max(y)  # Normalize to ensure maximum value is 1
+
+    return y
+
+
+def generate_mature_curve(x, value=0.25):
     return np.full_like(x, value)
 
-from scipy.stats import beta
 
 def skewed_gaussian(x, mean, std_dev, skew_factor):
     # Generate a Gaussian curve and apply a skew factor to make it right-skewed
@@ -20,29 +30,33 @@ def skewed_gaussian(x, mean, std_dev, skew_factor):
     y = gauss * skew
     return y
 
-def adjust_y_with_conditions(x, y, c=0.02, x_peak=30, decay_length=10):
+
+def adjust_y_with_conditions(x, y, c=0.02, x_peak=30, decay_length=60, decay_exponent=2.0):
     # Apply c when x < x_peak
     y[x < x_peak] += c
 
-    # For x >= x_peak, apply a diminishing addition of c over the decay_length
+    # For x >= x_peak, apply a diminishing addition of c over the decay_length with an exponential decay
     mask = (x >= x_peak) & (x <= x_peak + decay_length)
-    diminishing_factor = 1 - ((x[mask] - x_peak) / decay_length)
+    diminishing_factor = np.exp(-decay_exponent * ((x[mask] - x_peak) / decay_length))
     diminishing_factor = np.maximum(diminishing_factor, 0)  # Ensure no negative values
 
     y[mask] += c * diminishing_factor
 
     return y
 
-def generate_maturing_curve(x, c=0.02, y_max=1.0, x_peak=30):
+
+def generate_maturing_curve(x, c=0.04, y_max=1.0, x_peak=32.5):
     # Generate skewed Gaussian curve for Type II maturing curve
     mean = x_peak  # Peak at x = 30
-    std_dev = 10  # Standard deviation, adjust to control spread
-    skew_factor = 0.25  # Adjust to control the amount of right skew
+    std_dev = 7.5  # Standard deviation, adjust to control spread
+    skew_factor = 0.3  # Adjust to control the amount of right skew
+    decay = 80
+    exponent = 3
 
     y = skewed_gaussian(x, mean, std_dev, skew_factor)
 
     # Apply adjustment conditions
-    y = adjust_y_with_conditions(x, y, c=c, x_peak=x_peak)
+    y = adjust_y_with_conditions(x, y, c=c, x_peak=x_peak, decay_length=decay, decay_exponent=exponent)
 
     # Normalize the curve to ensure it's comparable as proportions (set y at x=0 to c and y at x=80 to 0)
     y = y - np.min(y)  # Shift to start from 0
@@ -50,32 +64,46 @@ def generate_maturing_curve(x, c=0.02, y_max=1.0, x_peak=30):
     y = y_max * y  # Scale to y_max
 
     # Apply smoothing to the final curve using Gaussian filter
-    y_smoothed = gaussian_filter1d(y, sigma=2)  # Adjust sigma for more or less smoothing
+    y_smoothed = gaussian_filter1d(y, sigma=4)  # Adjust sigma for more or less smoothing
 
     return y_smoothed
 
 
+def normalize_to_key_points(x, y, key_points):
+    # Extract the y-values at the specified key points
+    y_values_at_points = np.interp(key_points, x, y)
+    total = np.sum(y_values_at_points)
+
+    # Scale y so that the sum of values at key points equals 1 (or 100%)
+    scaling_factor = 1.0 / total
+    y_normalized = y * scaling_factor
+
+    return y_normalized
 
 
 def plot_tree_population_curves():
     fig, ax = plt.subplots()
 
     x = np.linspace(0, 80, 300)
+    key_points = [10, 30, 50, 70]
 
     # Type I (Youthful)
     y_youthful = generate_youthful_curve(x)
-    y_youthful_normalized = y_youthful / simpson(y=y_youthful, x=x)
+    y_youthful_normalized = normalize_to_key_points(x, y_youthful, key_points)
     ax.plot(x, y_youthful_normalized, lw=2, label='Youthful (Type I)', color='blue')
+    ax.scatter(key_points, np.interp(key_points, x, y_youthful_normalized), color='blue', marker='o')
 
     # Type II (Maturing)
     y_maturing = generate_maturing_curve(x)
-    y_maturing_normalized = y_maturing / simpson(y=y_maturing, x=x)
+    y_maturing_normalized = normalize_to_key_points(x, y_maturing, key_points)
     ax.plot(x, y_maturing_normalized, lw=2, label='Maturing (Type II)', color='green')
+    ax.scatter(key_points, np.interp(key_points, x, y_maturing_normalized), color='green', marker='o')
 
     # Type III (Mature)
     y_mature = generate_mature_curve(x)
-    y_mature_normalized = y_mature / simpson(y=y_mature, x=x)
+    y_mature_normalized = normalize_to_key_points(x, y_mature, key_points)
     ax.plot(x, y_mature_normalized, lw=2, label='Mature (Type III)', color='red')
+    ax.scatter(key_points, np.interp(key_points, x, y_mature_normalized), color='red', marker='o')
 
     # Labels, ticks, and formatting
     ax.set_xlabel('Diameter at Breast Height (cm)')
@@ -85,6 +113,7 @@ def plot_tree_population_curves():
     ax.set_xticklabels(['0 cm', '20 cm', '40 cm', '60 cm', '80 cm'])
 
     ax.set_xlim(0, 80)
+    ax.set_ylim(0, 1)
 
     ax.axvline(x=20, color='black', linestyle='--', lw=1)
     ax.axvline(x=40, color='black', linestyle='--', lw=1)
@@ -98,7 +127,18 @@ def plot_tree_population_curves():
     ax.legend()
 
     plt.tight_layout()
-    plt.savefig("plot.png", dpi=1200)
-    fig.savefig('plot.svg', format='svg', dpi=1200)
+    plt.show()
 
-plot_tree_population_curves()
+
+if __name__ == '__main__':
+    importlib.import_module(os.path.splitext(os.path.basename(__file__))[0])
+
+    script_path = os.path.basename(__file__)
+    script_name = os.path.splitext(script_path)[0]
+
+    while True:
+        if script_name in sys.modules:
+            importlib.reload(sys.modules[script_name])
+
+        # Call the plotting function from the reloaded module
+        sys.modules[script_name].plot_tree_population_curves()
