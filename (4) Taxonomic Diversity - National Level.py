@@ -1,6 +1,7 @@
 # This code is based on the work of Ma et al. (2020) (DOI: 10.1016/j.ufug.2020.126826)
 
 import pandas as pd
+import numpy as np
 
 ## Import data
 master_df = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\(2) Filtered Master Dataset.csv', low_memory=False)
@@ -103,7 +104,6 @@ def count_unique_cities_for_taxa_min_count(df, column, taxa_list, min_count=100)
         city_counts[taxa] = cities_with_min_count
     return city_counts
 
-
 # Count unique cities where species, genus, and family appear at least 100 times
 species_city_counts = count_unique_cities_for_taxa_min_count(df, 'Species', top_species_names)
 genus_city_counts = count_unique_cities_for_taxa_min_count(df, 'Genus', top_genus_names)
@@ -179,3 +179,19 @@ nativity_proportion_by_city = nativity_proportion_by_city.round(2) # Round the p
 
 print("Proportion of native trees for each city (in percentages):")
 print(nativity_proportion_by_city)
+
+# Calculate Shannon-Weiner Index for each City
+def shannon_diversity(series):
+    proportions = series.value_counts(normalize=True)  # Get proportions of each unique value
+    return -sum(proportions * np.log(proportions))
+
+# Group by City and apply Shannon diversity function to each relevant column
+shannon_species = df.groupby('City')['Species'].apply(shannon_diversity).reset_index(name='Shannon_Species')
+shannon_genus = df.groupby('City')['Genus'].apply(shannon_diversity).reset_index(name='Shannon_Genus')
+shannon_family = df.groupby('City')['Family'].apply(shannon_diversity).reset_index(name='Shannon_Family')
+
+# Combine the results into a single DataFrame
+shannon_df = pd.merge(shannon_species, shannon_genus, on='City')
+shannon_df = pd.merge(shannon_df, shannon_family, on='City')
+
+print(shannon_df)
