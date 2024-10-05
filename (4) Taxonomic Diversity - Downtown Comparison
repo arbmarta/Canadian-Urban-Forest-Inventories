@@ -12,7 +12,7 @@ downtown_index = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban 
 find_and_replace = pd.read_csv(r'C:\Users\alexj\Documents\Research\Canadian Urban Forest Inventories - Structure and Diversity\Python Scripts and Datasets\Non-Inventory Datasets\Find and Replace 2.csv', low_memory=False)
 
 included_cities = ['Moncton', 'Fredericton', 'Quebec City', 'Longueuil', 'Montreal', 'Ottawa', 'Kingston',
- 'Toronto', 'St. Catherines', 'Kelowna', 'Kitchener', 'Guelph', 'Windsor', 'Winnipeg', 'Regina', 'Lethbridge', 'Calgary',
+ 'Toronto', 'St. Catharines', 'Kelowna', 'Kitchener', 'Guelph', 'Windsor', 'Winnipeg', 'Regina', 'Lethbridge', 'Calgary',
  'Edmonton', 'Vancouver', 'Victoria', 'Mississauga', 'Burlington', 'Waterloo']
 
 ## Drop any rows where botanical name is blank or species ID is "missing"
@@ -104,7 +104,9 @@ df_1 = df[df['City'].isin(included_cities)]
 merged_df = df_1.merge(downtown_index, on='DAUID', how='left')
 merged_df['Location'] = merged_df['DOWNTOWN'].apply(lambda x: 'Downtown' if pd.notna(x) else 'Periphery')
 merged_df['Identifier'] = merged_df['City'] + " " + merged_df['Location']
+merged_df = merged_df.merge(location_index, on='City', how='left')
 print(merged_df.columns)
+print(merged_df['Province_y'].head())
 
 for identifier in merged_df['Identifier'].unique():
     print(f"Processing Identifier: {identifier}")
@@ -156,7 +158,7 @@ for identifier in merged_df['Identifier'].unique():
         if pd.isna(row['Province Nativity']):  # Check if 'Province Nativity' is NaN
             return 'I'
         province_nativity = str(row['Province Nativity'])  # Convert 'Province Nativity' to a string
-        return 'N' if row['Province'] in province_nativity else 'I'  # Check if 'Province' is in the 'Province Nativity'
+        return 'N' if row['Province_y'] in province_nativity else 'I'  # Check if 'Province' is in the 'Province Nativity'
 
     native_tree_df['Nativity'] = native_tree_df.apply(check_nativity, axis=1)
 
